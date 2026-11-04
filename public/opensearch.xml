@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>gs0 Search</ShortName>
+  <Description>Private search</Description>
+  <InputEncoding>UTF-8</InputEncoding>
+  <Image type="image/svg+xml" width="32" height="32">https://search.gs0.me/favicon.svg</Image>
+  <Url type="text/html" method="get" template="https://search.gs0.me/?q={searchTerms}"/>
+  <Url type="application/opensearchdescription+xml" rel="self" template="https://search.gs0.me/opensearch.xml"/>
+</OpenSearchDescription>
