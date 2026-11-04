@@ -11,6 +11,7 @@
   import LogoClock from './lib/LogoClock.svelte';
   import LogoSetting from './lib/LogoSetting.svelte';
   import ResultList from './lib/ResultList.svelte';
+  import SectionTitle from './lib/SectionTitle.svelte';
   import ThemeSetting from './lib/ThemeSetting.svelte';
   import { CATEGORIES, hrefFor, readRoute, type Route } from './lib/route';
   import { search, type SearchResponse } from './lib/searxng';
@@ -100,6 +101,9 @@
     navigate({ q: input.trim(), category: route.category, page: 1 });
   }
 
+  const pageStep =
+    '-mb-px flex w-11 items-center justify-center border-b-2 border-transparent font-bold text-accent no-underline hover:border-accent';
+
   function onPopState() {
     route = readRoute(location.search);
     input = route.q;
@@ -110,7 +114,11 @@
 
 {#snippet queryLink(q: string)}
   {@const next = { q, category: route.category, page: 1 }}
-  <a href={hrefFor(next)} onclick={(event) => follow(event, next)}>{q}</a>
+  <a
+    class="no-underline decoration-accent decoration-2 underline-offset-4 hover:underline"
+    href={hrefFor(next)}
+    onclick={(event) => follow(event, next)}>{q}</a
+  >
 {/snippet}
 
 <div class="mx-auto max-w-304 px-4 pt-4 pb-12">
@@ -193,17 +201,20 @@
         <AiSetting />
       </div>
     {:else if error}
-      <div class="max-w-184 rounded-lg border border-danger px-4 py-[0.8rem]" role="alert">
-        <p class="mb-3">{error}</p>
-        <button type="button" onclick={() => (attempt += 1)}>Try again</button>
-        <button type="button" onclick={() => location.reload()}>Reload page</button>
+      <div class="max-w-184" role="alert">
+        <SectionTitle title="Search failed" danger />
+        <p class="mb-2">{error}</p>
+        <div class="flex gap-5">
+          <button type="button" onclick={() => (attempt += 1)}>Try again</button>
+          <button type="button" onclick={() => location.reload()}>Reload page</button>
+        </div>
       </div>
     {:else if shown}
       {@const { response } = shown}
       {@const isImages = shown.route.category === 'images'}
 
       {#if response.corrections.length}
-        <p class="mb-4">
+        <p class="mb-4 text-muted">
           Did you mean
           {#each response.corrections as correction, index}
             {#if index > 0},{/if}
@@ -217,17 +228,13 @@
       >
         <div class={['min-w-0', !isImages && 'max-w-184']}>
           {#each response.answers as answer}
-            <p class="mb-4 rounded-lg border border-line bg-surface px-4 py-[0.8rem] font-[550]">{answer.answer}</p>
+            <section class="mb-8" aria-label="Answer">
+              <SectionTitle title="Answer">
+                {#snippet aside()}<span class="truncate">{answer.engine}</span>{/snippet}
+              </SectionTitle>
+              <p class="text-[1.1rem] font-semibold wrap-anywhere">{answer.answer}</p>
+            </section>
           {/each}
-
-          {#if summarize}
-            <AiSummary query={shown.route.q} results={response.results} />
-          {:else if canSummarize}
-            <div class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
-              <button type="button" onclick={() => (askedFor = route)}>Summarize with AI</button>
-              <span class="text-[0.8rem] text-muted">Sends this search and its result snippets to OpenRouter.</span>
-            </div>
-          {/if}
 
           {#if response.results.length === 0}
             <p class="mb-4">
@@ -240,8 +247,42 @@
           {/if}
         </div>
 
-        {#if response.infoboxes.length}
-          <aside>
+        <!--
+          The side column holds the summary and infoboxes. Below the two-column width it dissolves into the grid,
+          lifting the summary above the results while infoboxes stay after them.
+        -->
+        {#if canSummarize || response.infoboxes.length}
+          <aside class="flex min-w-0 flex-col gap-8 max-[66rem]:contents">
+            {#if canSummarize}
+              <div class="max-[66rem]:order-first max-[66rem]:max-w-184">
+                {#if summarize}
+                  <AiSummary query={shown.route.q} results={response.results} />
+                {:else}
+                  <!-- Same heading as the summary, so the button turns into it in place. -->
+                  <section aria-label="AI summary">
+                    <SectionTitle
+                      title="AI summary"
+                      info={{
+                        id: 'ai-summary-offer-info',
+                        text: 'Clicking sends your query and the result snippets to OpenRouter.',
+                      }}
+                    >
+                      {#snippet action()}
+                        <!-- The arrows close the line, like the header's search button. -->
+                        <button
+                          class="-mb-px flex flex-none items-center gap-2 py-1"
+                          type="button"
+                          aria-label="Summarize these results"
+                          onclick={() => (askedFor = route)}
+                        >
+                          Summarize <span class="font-bold">&gt;&gt;&gt;</span>
+                        </button>
+                      {/snippet}
+                    </SectionTitle>
+                  </section>
+                {/if}
+              </div>
+            {/if}
             {#each response.infoboxes as infobox}
               <InfoboxCard {infobox} />
             {/each}
@@ -251,8 +292,8 @@
 
       {#if response.suggestions.length}
         <section class="mt-8" aria-label="Suggested searches">
-          <h2 class="mb-2 text-[0.95rem] font-bold">Related searches</h2>
-          <ul class="flex flex-wrap gap-x-4 gap-y-[0.4rem]">
+          <SectionTitle title="Related searches" />
+          <ul class="flex flex-wrap gap-x-5 gap-y-[0.4rem]">
             {#each response.suggestions as suggestion}
               <li>{@render queryLink(suggestion)}</li>
             {/each}
@@ -263,13 +304,32 @@
       {#if shown.route.page > 1 || response.results.length}
         {@const previous = { ...shown.route, page: shown.route.page - 1 }}
         {@const following = { ...shown.route, page: shown.route.page + 1 }}
-        <nav class="mt-8 flex items-center gap-4 text-muted" aria-label="Pages">
+        <!-- The header's line and arrows again: the current page sits on the rule like a tab, unavailable steps stay gray. -->
+        <nav class="mt-8 flex min-h-11 gap-3 border-b border-line-strong" aria-label="Pages">
           {#if shown.route.page > 1}
-            <a rel="prev" href={hrefFor(previous)} onclick={(event) => follow(event, previous)}>Previous</a>
+            <a
+              class={pageStep}
+              rel="prev"
+              aria-label="Previous page"
+              href={hrefFor(previous)}
+              onclick={(event) => follow(event, previous)}>&lt;&lt;&lt;</a
+            >
+          {:else}
+            <span class="flex w-11 items-center justify-center text-muted" aria-hidden="true">&lt;&lt;&lt;</span>
           {/if}
-          <span>Page {shown.route.page}</span>
+          <span class="-mb-px flex items-center border-b-2 border-accent px-[0.1rem] font-semibold" aria-current="page"
+            >Page {shown.route.page}</span
+          >
           {#if response.results.length}
-            <a rel="next" href={hrefFor(following)} onclick={(event) => follow(event, following)}>Next</a>
+            <a
+              class={pageStep}
+              rel="next"
+              aria-label="Next page"
+              href={hrefFor(following)}
+              onclick={(event) => follow(event, following)}>&gt;&gt;&gt;</a
+            >
+          {:else}
+            <span class="flex w-11 items-center justify-center text-muted" aria-hidden="true">&gt;&gt;&gt;</span>
           {/if}
         </nav>
       {/if}

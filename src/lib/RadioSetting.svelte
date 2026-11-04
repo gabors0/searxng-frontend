@@ -1,21 +1,28 @@
 <script lang="ts" generics="T extends string">
+  import InfoTip from './InfoTip.svelte';
+
   let {
     label,
     name,
     options,
     value,
     onchange,
+    info,
   }: {
     label: string;
     name: string;
     options: readonly { id: T; label: string }[];
     value: T;
     onchange: (next: T) => void;
+    info?: string;
   } = $props();
 </script>
 
 <div class="flex w-fit items-baseline gap-4 border-b border-line-strong">
-  <span id="{name}-label" class="text-text">{label}</span>
+  <span class="flex items-baseline gap-[0.1rem]">
+    <span id="{name}-label" class="text-text">{label}</span>
+    {#if info}<InfoTip id="{name}-info" text={info} />{/if}
+  </span>
   <div class="flex gap-3" role="radiogroup" aria-labelledby="{name}-label">
     {#each options as option (option.id)}
       <label

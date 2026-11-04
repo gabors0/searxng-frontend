@@ -33,6 +33,8 @@ export interface Summary {
   text: string;
   sources: Source[];
   cutOff: boolean;
+  // In US dollars, from OpenRouter's usage report. Missing when the stream ended without one.
+  cost?: number;
 }
 
 export class SummaryError extends Error {
@@ -74,6 +76,8 @@ function requestBody(query: string, results: SearchResult[]) {
     // This model reasons at high effort by default, which adds cost and delay.
     reasoning: { effort: 'none' },
     provider: { zdr: true, sort: 'price' },
+    // Adds a final chunk with token counts and the cost of the request.
+    usage: { include: true },
   };
 }
 
@@ -102,7 +106,12 @@ function statusError(status: number, detail: string | undefined): SummaryError {
 }
 
 // Handles one line of the stream, returning true at the end marker.
-function readLine(line: string, onContent: (content: string) => void, onFinish: (reason: string) => void): boolean {
+function readLine(
+  line: string,
+  onContent: (content: string) => void,
+  onFinish: (reason: string) => void,
+  onCost: (cost: number) => void,
+): boolean {
   // Lines starting with a colon are keep-alive comments, such as ": OPENROUTER PROCESSING".
   if (!line.startsWith('data:')) return false;
   const data = line.slice(5).trim();
@@ -120,6 +129,9 @@ function readLine(line: string, onContent: (content: string) => void, onFinish: 
     throw new SummaryError(`The AI provider failed${detail}`);
   }
 
+  // The usage chunk comes last, with an empty choices list.
+  if (typeof chunk.usage?.cost === 'number') onCost(chunk.usage.cost);
+
   const choice = chunk.choices?.[0];
   if (choice?.finish_reason === 'error') throw new SummaryError('The AI provider failed.');
   if (typeof choice?.delta?.content === 'string') onContent(choice.delta.content);
@@ -130,10 +142,11 @@ function readLine(line: string, onContent: (content: string) => void, onFinish: 
 async function readStream(
   body: ReadableStream<BufferSource>,
   onText: (text: string) => void,
-): Promise<{ text: string; cutOff: boolean }> {
+): Promise<{ text: string; cutOff: boolean; cost?: number }> {
   const reader = body.pipeThrough(new TextDecoderStream()).getReader();
   let text = '';
   let finishReason: string | undefined;
+  let cost: number | undefined;
   let done = false;
   let buffered = '';
 
@@ -144,6 +157,9 @@ async function readStream(
   const onFinish = (reason: string) => {
     finishReason = reason;
   };
+  const onCost = (value: number) => {
+    cost = value;
+  };
 
   try {
     while (!done) {
@@ -153,7 +169,7 @@ async function readStream(
       const lines = buffered.split('\n');
       buffered = lines.pop() ?? '';
       for (const line of lines) {
-        done = readLine(line.trim(), onContent, onFinish) || done;
+        done = readLine(line.trim(), onContent, onFinish, onCost) || done;
       }
     }
   } finally {
@@ -163,7 +179,7 @@ async function readStream(
 
   if (!text.trim()) throw new SummaryError('The AI provider returned no text.');
   if (!done && !finishReason) throw new SummaryError('The connection ended before the summary finished.');
-  return { text, cutOff: finishReason !== undefined && finishReason !== 'stop' };
+  return { text, cost, cutOff: finishReason !== undefined && finishReason !== 'stop' };
 }
 
 export function sourcesFor(results: SearchResult[]): Source[] {
@@ -211,13 +227,18 @@ export async function streamSummary(
       throw new SummaryError('The AI provider returned no text.');
     }
 
-    const { text, cutOff } = await readStream(response.body, onText);
-    return { text, cutOff, sources: sourcesFor(top) };
+    const { text, cutOff, cost } = await readStream(response.body, onText);
+    return { text, cutOff, cost, sources: sourcesFor(top) };
   } catch (error) {
     if (error instanceof SummaryError || signal.aborted) throw error;
     if (limited.aborted) throw new SummaryError('The AI summary took too long.');
     throw new SummaryError('The connection ended before the summary finished.');
   }
+}
+
+// A request costs a fraction of a cent, so two significant digits say more than rounding to $0.00.
+export function formatCost(cost: number): string {
+  return cost.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumSignificantDigits: 2 });
 }
 
 export type SummaryPart = { text: string } | { text: string; href: string; title: string };

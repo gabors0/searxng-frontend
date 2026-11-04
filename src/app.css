@@ -127,12 +127,14 @@
     outline-offset: 2px;
   }
 
+  /* Flat like the header's submit button: accent text that gains an accent underline on hover. */
   button {
-    padding: 0.55rem 0.9rem;
-    border: 1px solid var(--line-strong);
-    border-radius: 0.5rem;
-    background: var(--surface);
-    color: var(--text);
+    padding: 0.25rem 0.1rem;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: var(--accent);
     font: inherit;
     cursor: pointer;
   }

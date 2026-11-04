@@ -9,7 +9,8 @@
 </script>
 
 <RadioSetting
-  label="AI summary (sends queries and result snippets to OpenRouter, keeps summaries in this browser for 24 hours)"
+  label="AI summary"
+  info="On summarizes each search automatically, sends the query and result snippets to OpenRouter, and keeps summaries in this browser for 24 hours. Off shows a button to start one."
   name="ai-summary"
   options={CHOICES}
   value={aiSummary.choice}
