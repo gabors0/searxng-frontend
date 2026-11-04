@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { aiSummary } from './ai-summary.svelte';
   import { linkCitations, sourcesFor, streamSummary, SummaryError, type Source } from './openrouter';
   import type { SearchResult } from './searxng';
-  import { cachedSummary } from './summary-cache';
+  import { cachedSummary, saveSummary } from './summary-cache';
 
   let { query, results }: { query: string; results: SearchResult[] } = $props();
 
@@ -34,6 +35,7 @@
     loading = true;
     streamSummary(currentQuery, currentResults, controller.signal, (partial) => (text = partial)).then(
       (summary) => {
+        saveSummary(currentQuery, summary, aiSummary.choice === 'on');
         cutOff = summary.cutOff;
         loading = false;
       },

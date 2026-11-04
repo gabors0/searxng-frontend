@@ -14,6 +14,7 @@
   import ThemeSetting from './lib/ThemeSetting.svelte';
   import { CATEGORIES, hrefFor, readRoute, type Route } from './lib/route';
   import { search, type SearchResponse } from './lib/searxng';
+  import { cachedSummary } from './lib/summary-cache';
 
   const initial = readRoute(location.search);
   let route = $state.raw(initial);
@@ -25,13 +26,18 @@
   let attempt = $state(0);
   let inputElement: HTMLInputElement;
 
+  // Set by the button when the setting is off. A new search makes a new route, which brings the button back.
+  let askedFor = $state.raw<Route | null>(null);
+
   // Comparing routes ends a summary as soon as a new search starts, while the old results are still on screen.
-  const summarize = $derived(
-    aiSummary.choice === 'on' &&
-      shown?.route === route &&
+  const canSummarize = $derived(
+    shown?.route === route &&
       route.category === 'general' &&
       route.page === 1 &&
       shown.response.results.length > 0,
+  );
+  const summarize = $derived(
+    canSummarize && (aiSummary.choice === 'on' || askedFor === route || cachedSummary(route.q) !== undefined),
   );
 
   $effect(() => {
@@ -216,6 +222,11 @@
 
           {#if summarize}
             <AiSummary query={shown.route.q} results={response.results} />
+          {:else if canSummarize}
+            <div class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+              <button type="button" onclick={() => (askedFor = route)}>Summarize with AI</button>
+              <span class="text-[0.8rem] text-muted">Sends this search and its result snippets to OpenRouter.</span>
+            </div>
           {/if}
 
           {#if response.results.length === 0}

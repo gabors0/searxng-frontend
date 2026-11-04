@@ -10,7 +10,8 @@ interface Saved {
   summary: Summary;
 }
 
-// Storage can be blocked or full, so this tab also keeps its own copy.
+// Storage can be blocked or full, and summaries asked for with the setting off stay out of it.
+// This tab's copy still covers back and forward in all of those cases.
 let memory: Saved[] = [];
 
 function normalize(query: string): string {
@@ -57,12 +58,12 @@ export function cachedSummary(query: string): Summary | undefined {
   return [...read(), ...memory].find((saved) => saved.query === key && isFresh(saved))?.summary;
 }
 
-export function saveSummary(query: string, summary: Summary) {
+export function saveSummary(query: string, summary: Summary, keep: boolean) {
   const entry = { query: normalize(query), savedAt: Date.now(), summary };
   const withEntry = (entries: Saved[]) =>
     [...entries.filter((saved) => saved.query !== entry.query), entry].slice(-MAX_SAVED);
   memory = withEntry(memory);
-  write(withEntry(read()));
+  if (keep) write(withEntry(read()));
 }
 
 export function pruneSummaries() {

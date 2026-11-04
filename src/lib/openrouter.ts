@@ -1,5 +1,4 @@
 import { safeUrl, type SearchResult } from './searxng';
-import { saveSummary } from './summary-cache';
 
 export const MODEL = 'deepseek/deepseek-v4.1-flash';
 
@@ -213,9 +212,7 @@ export async function streamSummary(
     }
 
     const { text, cutOff } = await readStream(response.body, onText);
-    const summary = { text, cutOff, sources: sourcesFor(top) };
-    saveSummary(query, summary);
-    return summary;
+    return { text, cutOff, sources: sourcesFor(top) };
   } catch (error) {
     if (error instanceof SummaryError || signal.aborted) throw error;
     if (limited.aborted) throw new SummaryError('The AI summary took too long.');
