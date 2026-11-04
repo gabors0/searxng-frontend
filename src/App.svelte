@@ -4,6 +4,9 @@
   import logoWhite from './assets/logo-white.svg';
   import ImageGrid from './lib/ImageGrid.svelte';
   import InfoboxCard from './lib/InfoboxCard.svelte';
+  import { logo } from './lib/logo.svelte';
+  import LogoClock from './lib/LogoClock.svelte';
+  import LogoSetting from './lib/LogoSetting.svelte';
   import ResultList from './lib/ResultList.svelte';
   import ThemeSetting from './lib/ThemeSetting.svelte';
   import { CATEGORIES, hrefFor, readRoute, type Route } from './lib/route';
@@ -94,14 +97,18 @@
 
 <div class="mx-auto max-w-304 px-4 pt-4 pb-12">
   <header class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center sm:flex">
-    <img class="mr-4 h-11 w-auto flex-none dark:hidden" src={logoBlack} alt="gs0/searxng" width="236" height="270" />
-    <img
-      class="mr-4 hidden h-11 w-auto flex-none dark:block"
-      src={logoWhite}
-      alt="gs0/searxng"
-      width="236"
-      height="270"
-    />
+    {#if logo.style === 'clock'}
+      <LogoClock class="mr-4 h-11 w-auto flex-none fill-black dark:fill-white" hours={logo.hours} />
+    {:else}
+      <img class="mr-4 h-11 w-auto flex-none dark:hidden" src={logoBlack} alt="gs0/searxng" width="236" height="218" />
+      <img
+        class="mr-4 hidden h-11 w-auto flex-none dark:block"
+        src={logoWhite}
+        alt="gs0/searxng"
+        width="236"
+        height="218"
+      />
+    {/if}
     <!--
       The input, tabs and button share one box model so their text lines up and accents sit on the line.
       Below sm the form dissolves into the header's grid: logo, input and button, then the tabs at full width.
@@ -162,7 +169,10 @@
 
   <main class:opacity-55={loading}>
     {#if !route.q}
-      <ThemeSetting />
+      <div class="flex flex-col gap-3">
+        <ThemeSetting />
+        <LogoSetting />
+      </div>
     {:else if error}
       <div class="max-w-184 rounded-lg border border-danger px-4 py-[0.8rem]" role="alert">
         <p class="mb-3">{error}</p>
