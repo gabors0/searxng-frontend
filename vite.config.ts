@@ -10,6 +10,7 @@ export default defineConfig({
         target: 'http://127.0.0.1:8083',
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
+      '/ai': 'http://127.0.0.1:8084',
     },
   },
 });

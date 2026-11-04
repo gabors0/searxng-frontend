@@ -2,6 +2,9 @@
   import { onMount } from 'svelte';
   import logoBlack from './assets/logo-black.svg';
   import logoWhite from './assets/logo-white.svg';
+  import { aiSummary } from './lib/ai-summary.svelte';
+  import AiSetting from './lib/AiSetting.svelte';
+  import AiSummary from './lib/AiSummary.svelte';
   import ImageGrid from './lib/ImageGrid.svelte';
   import InfoboxCard from './lib/InfoboxCard.svelte';
   import { logo } from './lib/logo.svelte';
@@ -21,6 +24,15 @@
   let loading = $state(false);
   let attempt = $state(0);
   let inputElement: HTMLInputElement;
+
+  // Comparing routes ends a summary as soon as a new search starts, while the old results are still on screen.
+  const summarize = $derived(
+    aiSummary.choice === 'on' &&
+      shown?.route === route &&
+      route.category === 'general' &&
+      route.page === 1 &&
+      shown.response.results.length > 0,
+  );
 
   $effect(() => {
     const current = route;
@@ -172,6 +184,7 @@
       <div class="flex flex-col gap-3">
         <ThemeSetting />
         <LogoSetting />
+        <AiSetting />
       </div>
     {:else if error}
       <div class="max-w-184 rounded-lg border border-danger px-4 py-[0.8rem]" role="alert">
@@ -200,6 +213,10 @@
           {#each response.answers as answer}
             <p class="mb-4 rounded-lg border border-line bg-surface px-4 py-[0.8rem] font-[550]">{answer.answer}</p>
           {/each}
+
+          {#if summarize}
+            <AiSummary query={shown.route.q} results={response.results} />
+          {/if}
 
           {#if response.results.length === 0}
             <p class="mb-4">

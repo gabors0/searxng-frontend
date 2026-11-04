@@ -28,6 +28,45 @@
 		reverse_proxy core:{$SEARXNG_PORT}
 	}
 
+	# The key is added here, so it never reaches the browser.
+	handle /ai/summary {
+		header {
+			Cache-Control no-store
+			defer
+		}
+
+		@notPost not method POST
+		respond @notPost 405
+
+		# Stops other sites spending credit through a signed-in browser.
+		@crossSite not header Sec-Fetch-Site same-origin
+		respond @crossSite 403
+
+		@noKey expression `{env.OPENROUTER_API_KEY} == ""`
+		header @noKey Content-Type application/json
+		respond @noKey `{"error":{"code":"not_configured"}}` 503
+
+		request_body {
+			max_size 32KB
+		}
+
+		rewrite * /api/v1/chat/completions
+		reverse_proxy https://openrouter.ai {
+			# Removes every incoming header, which covers Cookie (the Access cookie contains an
+			# email address), Cf-*, X-Forwarded-*, X-Real-IP, Origin, Referer and the browser's own.
+			header_up -*
+			header_up Host openrouter.ai
+			header_up Authorization "Bearer {env.OPENROUTER_API_KEY}"
+			header_up Content-Type application/json
+			header_up Accept text/event-stream
+			# Lets the stream arrive line by line, rather than compressed.
+			header_up Accept-Encoding identity
+			header_up User-Agent searxng-frontend
+			header_down -Set-Cookie
+			flush_interval -1
+		}
+	}
+
 	handle /assets/* {
 		header Cache-Control "public, max-age=31536000, immutable"
 		file_server
