@@ -1,72 +1,137 @@
-:root {
-  color-scheme: light dark;
-  --bg: #f7f7f5;
-  --surface: #ffffff;
-  --text: #1c1d1f;
-  --muted: #62656b;
-  --line: #e2e2de;
-  --line-strong: #bdbdb8;
-  --accent: #2f5fd0;
-  --link: #2450b8;
-  --visited: #6b3fa8;
-  --success: #1f6b45;
-  --danger: #b3362b;
+@import 'tailwindcss';
+
+@font-face {
+  font-family: 'Geist';
+  src: url('./assets/fonts/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
 }
 
-@media (prefers-color-scheme: dark) {
+@font-face {
+  font-family: 'Geist';
+  src: url('./assets/fonts/Geist-Italic-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('./assets/fonts/GeistMono-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('./assets/fonts/GeistMono-Italic-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Geist Serif has one weight. Its variable axis, ELSH, selects the shape of the dots. */
+@font-face {
+  font-family: 'Geist Serif';
+  src: url('./assets/fonts/GeistSerif-Variable.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --font-serif: 'Geist Serif', 'Times New Roman', Times, serif;
+  --font-serif--font-variation-settings: 'ELSH' 0;
+  --font-serif-square: 'Geist Serif', 'Times New Roman', Times, serif;
+  --font-serif-square--font-variation-settings: 'ELSH' 25;
+  --font-serif-triangle: 'Geist Serif', 'Times New Roman', Times, serif;
+  --font-serif-triangle--font-variation-settings: 'ELSH' 50;
+  --font-serif-heart: 'Geist Serif', 'Times New Roman', Times, serif;
+  --font-serif-heart--font-variation-settings: 'ELSH' 100;
+}
+
+/* inline keeps these pointing at the variables below, which change in dark mode. */
+@theme inline {
+  --color-surface: var(--surface);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+}
+
+/* These stay in the base layer so that Tailwind utilities can override them. */
+@layer base {
   :root {
-    --bg: #161719;
-    --surface: #1f2023;
-    --text: #e8e8e6;
-    --muted: #a0a3a9;
-    --line: #313337;
-    --line-strong: #4c4f55;
-    --accent: #7ea2f2;
-    --link: #93b3f7;
-    --visited: #c3a4ee;
-    --success: #79c49a;
-    --danger: #ef8a80;
+    color-scheme: light dark;
+    --bg: #f7f7f5;
+    --surface: #ffffff;
+    --text: #1c1d1f;
+    --muted: #62656b;
+    --line: #e2e2de;
+    --line-strong: #bdbdb8;
+    --accent: #2f5fd0;
+    --link: #2450b8;
+    --visited: #6b3fa8;
+    --success: #1f6b45;
+    --danger: #b3362b;
   }
-}
 
-* {
-  box-sizing: border-box;
-}
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161719;
+      --surface: #1f2023;
+      --text: #e8e8e6;
+      --muted: #a0a3a9;
+      --line: #313337;
+      --line-strong: #4c4f55;
+      --accent: #7ea2f2;
+      --link: #93b3f7;
+      --visited: #c3a4ee;
+      --success: #79c49a;
+      --danger: #ef8a80;
+    }
+  }
 
-html {
-  -webkit-text-size-adjust: 100%;
-}
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 var(--font-sans);
+  }
 
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-}
+  /* Preflight removes the browser's link underline, which the app relies on. */
+  a {
+    color: var(--link);
+    text-decoration: underline;
+  }
 
-a {
-  color: var(--link);
-}
+  a:visited {
+    color: var(--visited);
+  }
 
-a:visited {
-  color: var(--visited);
-}
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
 
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
+  button {
+    padding: 0.55rem 0.9rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+  }
 
-button {
-  padding: 0.55rem 0.9rem;
-  border: 1px solid var(--line-strong);
-  border-radius: 0.5rem;
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-  cursor: pointer;
-}
-
-button:hover {
-  border-color: var(--accent);
+  button:hover {
+    border-color: var(--accent);
+  }
 }

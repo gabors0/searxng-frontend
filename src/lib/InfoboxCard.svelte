@@ -13,89 +13,34 @@
   );
 </script>
 
-<section aria-label={infobox.infobox}>
+<section class="mb-4 rounded-lg border border-line bg-surface p-4 wrap-anywhere" aria-label={infobox.infobox}>
   {#if image}
-    <img src={image} alt="" loading="lazy" referrerpolicy="no-referrer" />
+    <img
+      class="mx-auto mb-3 block max-h-56 max-w-full rounded-[0.3rem]"
+      src={image}
+      alt=""
+      loading="lazy"
+      referrerpolicy="no-referrer"
+    />
   {/if}
-  <h2>{infobox.infobox}</h2>
+  <h2 class="mb-[0.4rem] text-[1.15rem] font-bold">{infobox.infobox}</h2>
   {#if infobox.content}
-    <p>{infobox.content}</p>
+    <p class="mb-3 text-[0.92rem]">{infobox.content}</p>
   {/if}
   {#if attributes.length}
-    <dl>
+    <dl class="mb-3 grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-x-3 gap-y-[0.3rem] text-[0.85rem]">
       {#each attributes as attribute, index (`${attribute.label}-${index}`)}
-        <dt>{attribute.label}</dt>
+        <dt class="text-muted">{attribute.label}</dt>
         <dd>{attribute.value}</dd>
       {/each}
     </dl>
   {/if}
   {#if links.length}
-    <ul>
+    <ul class="mb-3 flex flex-wrap gap-x-[0.9rem] gap-y-1 text-[0.85rem]">
       {#each links as link, index (`${link.href}-${index}`)}
         <li><a href={link.href} rel="noreferrer">{link.title}</a></li>
       {/each}
     </ul>
   {/if}
-  <p class="meta">{infobox.engine}</p>
+  <p class="text-xs/normal text-muted">{infobox.engine}</p>
 </section>
-
-<style>
-  section {
-    margin-bottom: 1rem;
-    padding: 1rem;
-    border: 1px solid var(--line);
-    border-radius: 0.5rem;
-    background: var(--surface);
-    overflow-wrap: anywhere;
-  }
-
-  img {
-    display: block;
-    max-width: 100%;
-    max-height: 14rem;
-    margin: 0 auto 0.75rem;
-    border-radius: 0.3rem;
-  }
-
-  h2 {
-    margin: 0 0 0.4rem;
-    font-size: 1.15rem;
-  }
-
-  p {
-    margin: 0 0 0.75rem;
-    font-size: 0.92rem;
-  }
-
-  dl {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-    gap: 0.3rem 0.75rem;
-    margin: 0 0 0.75rem;
-    font-size: 0.85rem;
-  }
-
-  dt {
-    color: var(--muted);
-  }
-
-  dd {
-    margin: 0;
-  }
-
-  ul {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 0.9rem;
-    margin: 0 0 0.75rem;
-    padding: 0;
-    font-size: 0.85rem;
-    list-style: none;
-  }
-
-  .meta {
-    margin: 0;
-    color: var(--muted);
-    font-size: 0.75rem;
-  }
-</style>

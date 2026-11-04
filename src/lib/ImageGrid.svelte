@@ -16,15 +16,21 @@
   }
 </script>
 
-<ul>
+<ul class="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-x-[0.9rem] gap-y-[1.1rem]">
   {#each results as result, index (`${result.url}-${index}`)}
     {@const href = safeUrl(result.url)}
     {@const full = safeUrl(result.img_src)}
     {@const thumbnail = safeUrl(result.thumbnail_src) ?? full}
     {#if thumbnail && !failed.has(index)}
-      <li>
-        <a class="frame" href={href ?? full} rel="noreferrer" title={result.title}>
+      <li class="min-w-0">
+        <a
+          class="block aspect-4/3 overflow-hidden rounded-[0.4rem] bg-line"
+          href={href ?? full}
+          rel="noreferrer"
+          title={result.title}
+        >
           <img
+            class="block size-full object-cover"
             src={thumbnail}
             alt={result.title}
             loading="lazy"
@@ -33,71 +39,12 @@
             onerror={() => markFailed(index)}
           />
         </a>
-        <p class="title">{result.title}</p>
-        <p class="meta">
-          <span>{[result.resolution, result.source || result.engine].filter(Boolean).join(' · ')}</span>
-          {#if full}<a href={full} rel="noreferrer">Image</a>{/if}
+        <p class="mt-1 truncate text-[0.85rem]">{result.title}</p>
+        <p class="mt-1 flex justify-between gap-2 truncate text-xs/normal text-muted">
+          <span class="min-w-0 truncate">{[result.resolution, result.source || result.engine].filter(Boolean).join(' · ')}</span>
+          {#if full}<a class="flex-none" href={full} rel="noreferrer">Image</a>{/if}
         </p>
       </li>
     {/if}
   {/each}
 </ul>
-
-<style>
-  ul {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
-    gap: 1.1rem 0.9rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  li {
-    min-width: 0;
-  }
-
-  .frame {
-    display: block;
-    overflow: hidden;
-    aspect-ratio: 4 / 3;
-    border-radius: 0.4rem;
-    background: var(--line);
-  }
-
-  img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  p {
-    overflow: hidden;
-    margin: 0.25rem 0 0;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .title {
-    font-size: 0.85rem;
-  }
-
-  .meta {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.5rem;
-    color: var(--muted);
-    font-size: 0.75rem;
-  }
-
-  .meta span {
-    overflow: hidden;
-    min-width: 0;
-    text-overflow: ellipsis;
-  }
-
-  .meta a {
-    flex: none;
-  }
-</style>

@@ -11,7 +11,7 @@
 
 	# no-referrer keeps queries out of requests to result sites and thumbnail hosts.
 	header {
-		Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src https: http: data:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+		Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src https: http: data:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 		Referrer-Policy no-referrer
 		X-Content-Type-Options nosniff
 	}
