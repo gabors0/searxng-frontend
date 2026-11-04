@@ -24,9 +24,10 @@ export function readRoute(search: string): Route {
 }
 
 export function hrefFor(route: Route): string {
-  if (!route.q) return '/';
-  const params = new URLSearchParams({ q: route.q });
+  const params = new URLSearchParams();
+  if (route.q) params.set('q', route.q);
   if (route.category !== 'general') params.set('category', route.category);
   if (route.page > 1) params.set('page', String(route.page));
-  return `/?${params}`;
+  const query = params.toString();
+  return query ? `/?${query}` : '/';
 }
