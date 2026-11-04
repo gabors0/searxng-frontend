@@ -92,19 +92,28 @@
 {/snippet}
 
 <div class="mx-auto max-w-304 px-4 pt-4 pb-12">
-  <header class="flex items-center gap-4">
-    <img class="h-11 w-auto flex-none dark:hidden" src={logoBlack} alt="gs0/searxng" width="236" height="270" />
-    <img class="hidden h-11 w-auto flex-none dark:block" src={logoWhite} alt="gs0/searxng" width="236" height="270" />
-    <!-- The input, tabs and button share one box model so their text lines up and accents sit on the line. -->
+  <header class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center sm:flex">
+    <img class="mr-4 h-11 w-auto flex-none dark:hidden" src={logoBlack} alt="gs0/searxng" width="236" height="270" />
+    <img
+      class="mr-4 hidden h-11 w-auto flex-none dark:block"
+      src={logoWhite}
+      alt="gs0/searxng"
+      width="236"
+      height="270"
+    />
+    <!--
+      The input, tabs and button share one box model so their text lines up and accents sit on the line.
+      Below sm the form dissolves into the header's grid: logo, input and button, then the tabs at full width.
+    -->
     <form
-      class="flex min-h-11 min-w-0 flex-1 flex-wrap border-b border-line-strong"
+      class="flex min-h-11 min-w-0 flex-1 border-b border-line-strong max-sm:contents"
       role="search"
       action="/"
       method="get"
       onsubmit={submit}
     >
       <input
-        class="-mb-px min-w-40 flex-1 border-b-2 border-transparent pr-3 pl-[0.2rem] outline-none focus:border-accent"
+        class="-mb-px min-w-40 flex-1 border-b-2 border-transparent pr-3 pl-[0.2rem] outline-none focus:border-b-2 focus:border-accent max-sm:mb-0 max-sm:h-11 max-sm:w-full max-sm:min-w-0 max-sm:border-b max-sm:border-line-strong"
         bind:this={inputElement}
         bind:value={input}
         type="search"
@@ -114,7 +123,10 @@
         autocomplete="off"
         enterkeyhint="search"
       />
-      <nav class="flex gap-3 sm:gap-5" aria-label="Categories">
+      <nav
+        class="flex gap-5 max-sm:col-span-full max-sm:row-start-2 max-sm:mt-1 max-sm:min-h-11 max-sm:border-b max-sm:border-line-strong"
+        aria-label="Categories"
+      >
         {#each CATEGORIES as { id, label } (id)}
           {@const next = { q: route.q, category: id, page: 1 }}
           <a
@@ -128,7 +140,7 @@
       <!-- Fixed width so the tabs don't shift when the weight changes on the first keystroke. -->
       <button
         class={[
-          '-mb-px ml-1 w-11 flex-none rounded-none border-0 border-b-2 border-transparent bg-transparent p-0 sm:ml-3',
+          '-mb-px w-11 flex-none rounded-none border-0 border-b-2 border-transparent bg-transparent p-0 max-sm:col-start-3 max-sm:row-start-1 max-sm:mb-0 max-sm:h-11 max-sm:border-b max-sm:border-line-strong sm:ml-3',
           input.trim() ? 'font-bold text-accent hover:border-accent' : 'text-muted',
         ]}
         type="submit"
