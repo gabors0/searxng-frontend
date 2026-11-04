@@ -5,6 +5,7 @@
   import ImageGrid from './lib/ImageGrid.svelte';
   import InfoboxCard from './lib/InfoboxCard.svelte';
   import ResultList from './lib/ResultList.svelte';
+  import ThemeSetting from './lib/ThemeSetting.svelte';
   import { CATEGORIES, hrefFor, readRoute, type Route } from './lib/route';
   import { search, type SearchResponse } from './lib/searxng';
 
@@ -160,7 +161,9 @@
   </div>
 
   <main class:opacity-55={loading}>
-    {#if error}
+    {#if !route.q}
+      <ThemeSetting />
+    {:else if error}
       <div class="max-w-184 rounded-lg border border-danger px-4 py-[0.8rem]" role="alert">
         <p class="mb-3">{error}</p>
         <button type="button" onclick={() => (attempt += 1)}>Try again</button>

@@ -1,5 +1,18 @@
 @import 'tailwindcss';
 
+/* Follows the theme setting, falling back to the system when there isn't one. */
+@custom-variant dark {
+  &:where([data-theme='dark'] *) {
+    @slot;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light']) *) {
+      @slot;
+    }
+  }
+}
+
 @font-face {
   font-family: 'Geist';
   src: url('./assets/fonts/Geist-Variable.woff2') format('woff2');
@@ -71,33 +84,26 @@
 @layer base {
   :root {
     color-scheme: light dark;
-    --bg: #f7f7f5;
-    --surface: #ffffff;
-    --text: #1c1d1f;
-    --muted: #62656b;
-    --line: #e2e2de;
-    --line-strong: #bdbdb8;
-    --accent: #2f5fd0;
-    --link: #2450b8;
-    --visited: #6b3fa8;
-    --success: #1f6b45;
-    --danger: #b3362b;
+    --bg: light-dark(#f7f7f5, #000);
+    --surface: light-dark(#ffffff, #1f2023);
+    --text: light-dark(#1c1d1f, #e8e8e6);
+    --muted: light-dark(#62656b, #a0a3a9);
+    --line: light-dark(#e2e2de, #313337);
+    --line-strong: light-dark(#bdbdb8, #4c4f55);
+    --accent: light-dark(#2f5fd0, #7ea2f2);
+    --link: light-dark(#2450b8, #93b3f7);
+    --visited: light-dark(#6b3fa8, #c3a4ee);
+    --success: light-dark(#1f6b45, #79c49a);
+    --danger: light-dark(#b3362b, #ef8a80);
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #000;
-      --surface: #1f2023;
-      --text: #e8e8e6;
-      --muted: #a0a3a9;
-      --line: #313337;
-      --line-strong: #4c4f55;
-      --accent: #7ea2f2;
-      --link: #93b3f7;
-      --visited: #c3a4ee;
-      --success: #79c49a;
-      --danger: #ef8a80;
-    }
+  /* Set from the theme setting. Without one, the page follows the system. */
+  :root[data-theme='light'] {
+    color-scheme: light;
+  }
+
+  :root[data-theme='dark'] {
+    color-scheme: dark;
   }
 
   body {
