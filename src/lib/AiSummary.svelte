@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { cachedSummary, linkCitations, sourcesFor, streamSummary, SummaryError, type Source } from './openrouter';
+  import { linkCitations, sourcesFor, streamSummary, SummaryError, type Source } from './openrouter';
   import type { SearchResult } from './searxng';
+  import { cachedSummary } from './summary-cache';
 
   let { query, results }: { query: string; results: SearchResult[] } = $props();
 

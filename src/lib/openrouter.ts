@@ -1,11 +1,11 @@
 import { safeUrl, type SearchResult } from './searxng';
+import { saveSummary } from './summary-cache';
 
 export const MODEL = 'deepseek/deepseek-v4.1-flash';
 
 const MAX_RESULTS = 8;
 const MAX_TOKENS = 400;
 const TIME_LIMIT_MS = 60_000;
-const MAX_CACHED = 50;
 
 // These caps keep the request under the request_body limit in the Caddyfile.
 const MAX_QUERY_LENGTH = 500;
@@ -29,7 +29,7 @@ export interface Source {
   url: string;
 }
 
-// Results are fetched again on back and forward, so a saved summary keeps the sources its numbers refer to.
+// Results can change between searches, so a saved summary keeps the sources its numbers refer to.
 export interface Summary {
   text: string;
   sources: Source[];
@@ -171,12 +171,6 @@ export function sourcesFor(results: SearchResult[]): Source[] {
   return results.slice(0, MAX_RESULTS).map(({ title, url }) => ({ title, url }));
 }
 
-const cache = new Map<string, Summary>();
-
-export function cachedSummary(query: string): Summary | undefined {
-  return cache.get(query);
-}
-
 export async function streamSummary(
   query: string,
   results: SearchResult[],
@@ -220,8 +214,7 @@ export async function streamSummary(
 
     const { text, cutOff } = await readStream(response.body, onText);
     const summary = { text, cutOff, sources: sourcesFor(top) };
-    if (cache.size >= MAX_CACHED) cache.delete(cache.keys().next().value as string);
-    cache.set(query, summary);
+    saveSummary(query, summary);
     return summary;
   } catch (error) {
     if (error instanceof SummaryError || signal.aborted) throw error;
