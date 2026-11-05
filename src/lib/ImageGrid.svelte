@@ -37,7 +37,7 @@
   }
 </script>
 
-<ul class="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-x-[0.9rem] gap-y-[1.1rem]">
+<ul class="rise-in grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-x-[0.9rem] gap-y-[1.1rem]">
   {#each results as result, index (`${result.url}-${index}`)}
     {@const href = safeUrl(result.url)}
     {@const full = safeUrl(result.img_src)}

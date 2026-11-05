@@ -9,6 +9,7 @@
     streamSummary,
     SummaryError,
     type Source,
+    type SummaryPart,
   } from './openrouter';
   import type { SearchResult } from './searxng';
   import SectionTitle from './SectionTitle.svelte';
@@ -26,12 +27,36 @@
   let loading = $state(false);
   let attempt = $state(0);
 
-  const parts = $derived(linkCitations(text, sources));
+  // Where each streamed update began. Every piece of text is its own span keyed by where it starts,
+  // so only text that just arrived fades in.
+  let starts = $state.raw<number[]>([]);
+
+  const pieces = $derived.by(() => {
+    const out: (SummaryPart & { start: number })[] = [];
+    let offset = 0;
+    for (const part of linkCitations(text, sources)) {
+      const end = offset + part.text.length;
+      if ('href' in part) {
+        out.push({ ...part, start: offset });
+      } else {
+        let from = offset;
+        for (const cut of starts) {
+          if (cut <= from || cut >= end) continue;
+          out.push({ text: text.slice(from, cut), start: from });
+          from = cut;
+        }
+        out.push({ text: text.slice(from, end), start: from });
+      }
+      offset = end;
+    }
+    return out;
+  });
 
   $effect(() => {
     const currentQuery = query;
     const currentResults = results;
     attempt;
+    starts = [];
     failure = null;
     cutOff = false;
     cost = undefined;
@@ -48,7 +73,10 @@
     text = '';
     sources = sourcesFor(currentResults);
     loading = true;
-    streamSummary(currentQuery, currentResults, controller.signal, (partial) => (text = partial)).then(
+    streamSummary(currentQuery, currentResults, controller.signal, (partial) => {
+        starts = [...starts, text.length];
+        text = partial;
+      }).then(
       (summary) => {
         saveSummary(currentQuery, summary, aiSummary.choice === 'on');
         cutOff = summary.cutOff;
@@ -80,9 +108,9 @@
 
   {#if text}
     <!-- Model output is untrusted: it only ever renders as text, plus links to real results. -->
-    <p class="font-serif text-[1.05rem] wrap-anywhere whitespace-pre-wrap">{#each parts as part}{#if 'href' in part}<a class="font-sans text-[0.75em] font-semibold text-accent no-underline hover:underline" href={part.href} title={part.title} rel="noreferrer">{part.text}</a>{:else}{part.text}{/if}{/each}</p>
+    <p class="font-serif text-[1.05rem] wrap-anywhere whitespace-pre-wrap">{#each pieces as piece (piece.start)}{#if 'href' in piece}<a class="ink font-sans text-[0.75em] font-semibold text-accent no-underline hover:underline" href={piece.href} title={piece.title} rel="noreferrer">{piece.text}</a>{:else}<span class="ink">{piece.text}</span>{/if}{/each}{#if loading}<span class="caret" aria-hidden="true"></span>{/if}</p>
   {:else if loading}
-    <p class="text-muted">Summarizing…</p>
+    <p class="animate-pulse text-muted">Summarizing…</p>
   {/if}
 
   {#if cutOff}

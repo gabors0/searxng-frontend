@@ -22,7 +22,7 @@
   }
 </script>
 
-<ol class="divide-y divide-line">
+<ol class="rise-in divide-y divide-line">
   {#each results as result, index (`${result.url}-${index}`)}
     {@const href = safeUrl(result.url)}
     {@const detail = formatDate(result.publishedDate) ?? result.metadata}

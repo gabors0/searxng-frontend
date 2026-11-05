@@ -17,6 +17,7 @@
   import { CATEGORIES, hrefFor, readRoute, type Route } from './lib/route';
   import { search, type SearchResponse } from './lib/searxng';
   import { cachedSummary } from './lib/summary-cache';
+  import { underline } from './lib/underline';
 
   const initial = readRoute(location.search);
   let route = $state.raw(initial);
@@ -159,13 +160,14 @@
         enterkeyhint="search"
       />
       <nav
-        class="flex gap-5 max-sm:col-span-full max-sm:row-start-2 max-sm:mt-1 max-sm:min-h-11 max-sm:border-b max-sm:border-line-strong"
+        class="slide-underline relative flex gap-5 max-sm:col-span-full max-sm:row-start-2 max-sm:mt-1 max-sm:min-h-11 max-sm:border-b max-sm:border-line-strong"
         aria-label="Categories"
+        use:underline={route.category}
       >
         {#each CATEGORIES as { id, label } (id)}
           {@const next = { q: route.q, category: id, page: 1 }}
           <a
-            class="-mb-px flex items-center border-b-2 border-transparent px-[0.1rem] text-muted no-underline aria-[current=page]:border-accent aria-[current=page]:font-semibold aria-[current=page]:text-text"
+            class="-mb-px flex items-center border-b-2 border-transparent px-[0.1rem] text-muted no-underline aria-[current=page]:font-semibold aria-[current=page]:text-text"
             href={hrefFor(next)}
             aria-current={route.category === id ? 'page' : undefined}
             onclick={(event) => follow(event, next)}>{label}</a
@@ -191,7 +193,7 @@
     {/if}
   </div>
 
-  <main class:opacity-55={loading}>
+  <main class="transition-opacity duration-200" class:opacity-55={loading}>
     {#if !route.q}
       <div class="flex flex-col gap-3">
         <ThemeSetting />
@@ -210,6 +212,8 @@
     {:else if shown}
       {@const { response } = shown}
       {@const isImages = shown.route.category === 'images'}
+      <!-- Each response is drawn afresh, so its results rise in even when they match the last ones. -->
+      {#key response}
 
       {#if response.corrections.length}
         <p class="mb-4 text-muted">
@@ -226,7 +230,7 @@
       >
         <div class={['min-w-0', !isImages && 'max-w-184']}>
           {#each response.answers as answer}
-            <section class="mb-8" aria-label="Answer">
+            <section class="appear mb-8" aria-label="Answer">
               <SectionTitle title="Answer">
                 {#snippet aside()}<span class="truncate">{answer.engine}</span>{/snippet}
               </SectionTitle>
@@ -250,7 +254,7 @@
           lifting the summary above the results while infoboxes stay after them.
         -->
         {#if canSummarize || response.infoboxes.length}
-          <aside class="flex min-w-0 flex-col gap-8 max-[66rem]:contents">
+          <aside class="rise-in flex min-w-0 flex-col gap-8 max-[66rem]:contents">
             {#if canSummarize}
               <div class="max-[66rem]:order-first max-[66rem]:max-w-184">
                 {#if summarize}
@@ -289,7 +293,7 @@
       </div>
 
       {#if response.suggestions.length}
-        <section class="mt-8" aria-label="Suggested searches">
+        <section class="appear mt-8" aria-label="Suggested searches">
           <SectionTitle title="Related searches" />
           <ul class="flex flex-wrap gap-x-5 gap-y-[0.4rem]">
             {#each response.suggestions as suggestion}
@@ -338,6 +342,7 @@
           {response.unresponsive_engines.map(([engine, reason]) => `${engine} (${reason})`).join(', ')}.
         </p>
       {/if}
+      {/key}
     {/if}
   </main>
 </div>
