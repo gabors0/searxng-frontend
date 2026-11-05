@@ -2,12 +2,12 @@
 
 /* Follows the theme setting, falling back to the system when there isn't one. */
 @custom-variant dark {
-  &:where([data-theme='dark'] *) {
+  &:where(:is([data-theme='dark'], [data-theme='graphite']) *) {
     @slot;
   }
 
   @media (prefers-color-scheme: dark) {
-    &:where(:root:not([data-theme='light']) *) {
+    &:where(:root:not([data-theme='light'], [data-theme='silver']) *) {
       @slot;
     }
   }
@@ -96,6 +96,38 @@
 
   :root[data-theme='dark'] {
     color-scheme: dark;
+  }
+
+  /* A light theme in cool metallic grays, with a steel-blue accent. */
+  :root[data-theme='silver'] {
+    color-scheme: light;
+    --bg: #dcdee2;
+    --surface: #eceef1;
+    --text: #17191d;
+    --muted: #4c5159;
+    --line: #c3c6cc;
+    --line-strong: #979ba3;
+    --accent: #2b5a8c;
+    --link: #224c79;
+    --visited: #5a3d88;
+    --success: #1b5f3d;
+    --danger: #9e2f28;
+  }
+
+  /* Silver's dark counterpart: cool charcoal grays rather than black. */
+  :root[data-theme='graphite'] {
+    color-scheme: dark;
+    --bg: #2a2c30;
+    --surface: #36383d;
+    --text: #e4e6ea;
+    --muted: #a3a8b1;
+    --line: #43464c;
+    --line-strong: #5d6169;
+    --accent: #8fb0e0;
+    --link: #9dbbe8;
+    --visited: #c2abe6;
+    --success: #86c7a2;
+    --danger: #f0948a;
   }
 
   body {

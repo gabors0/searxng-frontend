@@ -6,6 +6,8 @@
     { id: 'system', label: 'System' },
     { id: 'light', label: 'Light' },
     { id: 'dark', label: 'Dark' },
+    { id: 'silver', label: 'Silver' },
+    { id: 'graphite', label: 'Graphite' },
   ];
 
   const root = document.documentElement;
