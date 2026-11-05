@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Lightbox from './Lightbox.svelte';
   import { safeUrl, type SearchResult } from './searxng';
 
   let { results }: { results: SearchResult[] } = $props();
@@ -13,6 +14,26 @@
 
   function markFailed(index: number) {
     failed = new Set(failed).add(index);
+  }
+
+  // The viewer steps through the tiles that are shown.
+  const shown = $derived(
+    results.filter((result, index) => !failed.has(index) && (safeUrl(result.thumbnail_src) ?? safeUrl(result.img_src))),
+  );
+  let open = $state<number | null>(null);
+
+  $effect(() => {
+    results;
+    open = null;
+  });
+
+  // Plain clicks open the viewer; modified clicks still open the page as a link.
+  function view(event: MouseEvent, result: SearchResult) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const position = shown.indexOf(result);
+    if (position === -1) return;
+    event.preventDefault();
+    open = position;
   }
 </script>
 
@@ -29,9 +50,10 @@
           href={href ?? full}
           rel="noreferrer"
           title={result.title}
+            onclick={(event) => view(event, result)}
         >
           <img
-            class="block aspect-4/3 w-full bg-line object-cover transition-opacity group-hover:opacity-90"
+            class="block aspect-4/3 w-full cursor-zoom-in bg-line object-cover transition-opacity group-hover:opacity-90"
             src={thumbnail}
             alt={result.title}
             loading="lazy"
@@ -55,3 +77,5 @@
     {/if}
   {/each}
 </ul>
+
+<Lightbox items={shown} bind:index={open} />

@@ -67,6 +67,21 @@
 		}
 	}
 
+	# Fetches result images through this origin so Save and Copy can read them. See imgproxy/main.go.
+	handle /img {
+		@notGet not method GET
+		respond @notGet 405
+
+		# Only this app may use it, not other sites through a signed-in browser.
+		@crossSite not header Sec-Fetch-Site same-origin
+		respond @crossSite 403
+
+		reverse_proxy 127.0.0.1:8085 {
+			# Drops the Access cookie and the rest of the browser's headers.
+			header_up -*
+		}
+	}
+
 	handle /assets/* {
 		header Cache-Control "public, max-age=31536000, immutable"
 		file_server

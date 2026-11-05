@@ -134,4 +134,9 @@
   button:hover {
     border-color: var(--accent);
   }
+
+  /* The page behind an open image viewer stays put. */
+  :root:has(dialog[open]) {
+    overflow: hidden;
+  }
 }
