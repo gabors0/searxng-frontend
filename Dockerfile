@@ -14,5 +14,6 @@ FROM docker.io/library/caddy:2.11.7-alpine
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/dist /srv
 COPY --from=imgproxy /imgproxy /usr/local/bin/imgproxy
-COPY --chmod=755 imgproxy/start.sh /usr/local/bin/start.sh
-CMD ["/usr/local/bin/start.sh"]
+# Run through sh, because a POSIX ACL on the build context file overrides COPY --chmod and removes the exec bit.
+COPY imgproxy/start.sh /usr/local/bin/start.sh
+CMD ["/bin/sh", "/usr/local/bin/start.sh"]
