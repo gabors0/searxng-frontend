@@ -92,8 +92,10 @@
 		file_server
 	}
 
+	# The app routes /engines itself, so it gets the same page as /.
 	handle {
 		header Cache-Control no-cache
+		rewrite /engines /index.html
 		file_server
 	}
 }

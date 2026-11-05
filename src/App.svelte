@@ -5,16 +5,20 @@
   import { aiSummary } from './lib/ai-summary.svelte';
   import AiSetting from './lib/AiSetting.svelte';
   import AiSummary from './lib/AiSummary.svelte';
+  import { chosenEngines } from './lib/engines.svelte';
+  import EnginesPage from './lib/EnginesPage.svelte';
   import ImageGrid from './lib/ImageGrid.svelte';
   import InfoboxCard from './lib/InfoboxCard.svelte';
   import { logo } from './lib/logo.svelte';
   import LogoClock from './lib/LogoClock.svelte';
   import LogoSetting from './lib/LogoSetting.svelte';
   import ResultList from './lib/ResultList.svelte';
+  import { searchPrefs } from './lib/search-prefs.svelte';
+  import SearchSettings from './lib/SearchSettings.svelte';
   import SectionTitle from './lib/SectionTitle.svelte';
   import Spinner from './lib/Spinner.svelte';
   import ThemeSetting from './lib/ThemeSetting.svelte';
-  import { CATEGORIES, hrefFor, readRoute, type Route } from './lib/route';
+  import { CATEGORIES, hrefFor, readRoute, TIME_RANGES, type Route } from './lib/route';
   import { search, type SearchResponse } from './lib/searxng';
   import { cachedSummary } from './lib/summary-cache';
   import { underline } from './lib/underline';
@@ -22,6 +26,8 @@
   const initial = readRoute(location.search);
   let route = $state.raw(initial);
   let input = $state(initial.q);
+  // The engines page has its own path. Everything else is the search page, described by the query string.
+  let view = $state<'search' | 'engines'>(location.pathname === '/engines' ? 'engines' : 'search');
   // The category travels with the response so the layout only switches once it arrives.
   let shown = $state.raw<{ route: Route; response: SearchResponse } | null>(null);
   let error = $state<string | null>(null);
@@ -37,6 +43,8 @@
     shown?.route === route &&
       route.category === 'general' &&
       route.page === 1 &&
+      // Summaries are cached by query alone, so a filtered search would show the unfiltered one.
+      route.time === 'any' &&
       shown.response.results.length > 0,
   );
   const summarize = $derived(
@@ -45,11 +53,17 @@
 
   $effect(() => {
     const current = route;
+    const prefs = {
+      safesearch: searchPrefs.safesearch,
+      language: searchPrefs.language,
+      engines: chosenEngines[current.category]?.slice(),
+    };
+    const onEngines = view === 'engines';
     attempt;
-    document.title = current.q ? `${current.q} - Search` : 'Search';
+    document.title = onEngines ? 'Engines - Search' : current.q ? `${current.q} - Search` : 'Search';
     error = null;
 
-    if (!current.q) {
+    if (onEngines || !current.q) {
       shown = null;
       loading = false;
       return;
@@ -57,7 +71,7 @@
 
     const controller = new AbortController();
     loading = true;
-    search(current, controller.signal).then(
+    search(current, prefs, controller.signal).then(
       (response) => {
         shown = { route: current, response };
         loading = false;
@@ -83,6 +97,7 @@
     } else {
       history.pushState(null, '', href);
     }
+    view = 'search';
     route = next;
     // Picking a tab before searching must not wipe what's been typed.
     if (next.q) input = next.q;
@@ -90,23 +105,33 @@
   }
 
   // Plain clicks stay in the app. Modified clicks keep their new-tab behaviour.
-  function follow(event: MouseEvent, next: Route) {
-    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-      return;
-    }
+  function isPlainClick(event: MouseEvent): boolean {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return false;
     event.preventDefault();
-    navigate(next);
+    return true;
+  }
+
+  function follow(event: MouseEvent, next: Route) {
+    if (isPlainClick(event)) navigate(next);
+  }
+
+  function openEngines(event: MouseEvent) {
+    if (!isPlainClick(event)) return;
+    history.pushState(null, '', '/engines');
+    view = 'engines';
+    scrollTo(0, 0);
   }
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    navigate({ q: input.trim(), category: route.category, page: 1 });
+    navigate({ ...route, q: input.trim(), page: 1 });
   }
 
   const pageStep =
     '-mb-px flex w-11 items-center justify-center border-b-2 border-transparent font-bold text-accent no-underline hover:border-accent';
 
   function onPopState() {
+    view = location.pathname === '/engines' ? 'engines' : 'search';
     route = readRoute(location.search);
     input = route.q;
   }
@@ -115,7 +140,7 @@
 <svelte:window onpopstate={onPopState} />
 
 {#snippet queryLink(q: string)}
-  {@const next = { q, category: route.category, page: 1 }}
+  {@const next = { ...route, q, page: 1 }}
   <a
     class="no-underline decoration-accent decoration-2 underline-offset-4 hover:underline"
     href={hrefFor(next)}
@@ -165,7 +190,7 @@
         use:underline={route.category}
       >
         {#each CATEGORIES as { id, label } (id)}
-          {@const next = { q: route.q, category: id, page: 1 }}
+          {@const next = { ...route, category: id, page: 1 }}
           <a
             class="-mb-px flex items-center border-b-2 border-transparent px-[0.1rem] text-muted no-underline aria-[current=page]:font-semibold aria-[current=page]:text-text"
             href={hrefFor(next)}
@@ -194,10 +219,36 @@
   </div>
 
   <main class="transition-opacity duration-200" class:opacity-55={loading}>
-    {#if !route.q}
+    {#if view === 'search' && route.q}
+      <nav
+        class="slide-underline relative mb-6 flex flex-wrap gap-x-4 gap-y-1 text-sm"
+        aria-label="Time range"
+        use:underline={route.time}
+      >
+        {#each TIME_RANGES as { id, label } (id)}
+          {@const next = { ...route, time: id, page: 1 }}
+          <a
+            class="border-b-2 border-transparent px-[0.1rem] text-muted no-underline hover:text-text aria-[current=true]:font-semibold aria-[current=true]:text-text"
+            href={hrefFor(next)}
+            aria-current={route.time === id ? 'true' : undefined}
+            onclick={(event) => follow(event, next)}>{label}</a
+          >
+        {/each}
+      </nav>
+    {/if}
+    {#if view === 'engines'}
+      <EnginesPage onback={(event) => follow(event, { q: '', category: 'general', page: 1, time: 'any' })} />
+    {:else if !route.q}
       <div class="flex flex-col gap-3">
         <ThemeSetting />
         <LogoSetting />
+        <SearchSettings />
+        <div class="flex w-fit items-baseline gap-4 border-b border-line-strong">
+          <span class="text-text">Engines</span>
+          <a class="-mb-px border-b-2 border-transparent px-[0.1rem] py-1 font-semibold text-accent no-underline hover:border-accent" href="/engines" onclick={openEngines}
+            >{Object.keys(chosenEngines).length ? 'Customized' : 'Server default'} &gt;&gt;&gt;</a
+          >
+        </div>
         <AiSetting />
       </div>
     {:else if error}

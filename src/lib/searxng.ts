@@ -4,6 +4,7 @@
 // get_json_response in searx/webutils.py at the same commit.
 
 export type Category = 'general' | 'images' | 'news';
+export type TimeRange = 'any' | 'day' | 'week' | 'month' | 'year';
 
 export interface SearchResult {
   url: string;
@@ -62,7 +63,8 @@ const UNREACHABLE =
   "Couldn't reach the search service. If this tab has been open a while, your sign-in may have expired, so try reloading.";
 
 export async function search(
-  query: { q: string; category: Category; page: number },
+  query: { q: string; category: Category; page: number; time: TimeRange },
+  prefs: { safesearch: string; language: string; engines?: readonly string[] },
   signal: AbortSignal,
 ): Promise<SearchResponse> {
   const params = new URLSearchParams({
@@ -71,6 +73,15 @@ export async function search(
     pageno: String(query.page),
     categories: query.category,
   });
+  // An explicit engine list replaces the category's engines, as long as no category is sent with it.
+  if (prefs.engines?.length) {
+    params.delete('categories');
+    params.set('engines', prefs.engines.join(','));
+  }
+  // Anything left out falls back to the server's settings.yml.
+  if (query.time !== 'any') params.set('time_range', query.time);
+  if (prefs.safesearch) params.set('safesearch', prefs.safesearch);
+  if (prefs.language) params.set('language', prefs.language);
 
   let response: Response;
   try {
@@ -91,6 +102,34 @@ export async function search(
     throw new Error(body.error ?? `Search failed with status ${response.status}.`);
   }
   return body;
+}
+
+export interface EngineInfo {
+  name: string;
+  categories: string[];
+  enabled: boolean;
+  shortcut: string;
+}
+
+// The server's engine list. It's about 100 kB, so only the engines page asks for it.
+export async function fetchEngines(signal: AbortSignal): Promise<EngineInfo[]> {
+  let response: Response;
+  try {
+    response = await fetch('/api/config', { signal });
+  } catch (error) {
+    if (signal.aborted) throw error;
+    throw new Error(UNREACHABLE);
+  }
+  if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+    throw new Error(UNREACHABLE);
+  }
+  const body = await response.json();
+  return (body.engines as EngineInfo[]).map(({ name, categories, enabled, shortcut }) => ({
+    name,
+    categories,
+    enabled,
+    shortcut,
+  }));
 }
 
 // Result URLs come from third-party engines, so block schemes like javascript:.
