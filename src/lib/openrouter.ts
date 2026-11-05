@@ -35,6 +35,8 @@ export interface Summary {
   cutOff: boolean;
   // In US dollars, from OpenRouter's usage report. Missing when the stream ended without one.
   cost?: number;
+  // Milliseconds from sending the request to the end of the stream. Missing on summaries cached before it was tracked.
+  duration?: number;
 }
 
 export class SummaryError extends Error {
@@ -194,6 +196,7 @@ export async function streamSummary(
 ): Promise<Summary> {
   const top = results.slice(0, MAX_RESULTS);
   const limited = AbortSignal.any([signal, AbortSignal.timeout(TIME_LIMIT_MS)]);
+  const started = performance.now();
 
   try {
     let response: Response;
@@ -228,7 +231,7 @@ export async function streamSummary(
     }
 
     const { text, cutOff, cost } = await readStream(response.body, onText);
-    return { text, cutOff, cost, sources: sourcesFor(top) };
+    return { text, cutOff, cost, duration: performance.now() - started, sources: sourcesFor(top) };
   } catch (error) {
     if (error instanceof SummaryError || signal.aborted) throw error;
     if (limited.aborted) throw new SummaryError('The AI summary took too long.');
@@ -239,6 +242,10 @@ export async function streamSummary(
 // A request costs a fraction of a cent, so two significant digits say more than rounding to $0.00.
 export function formatCost(cost: number): string {
   return cost.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumSignificantDigits: 2 });
+}
+
+export function formatDuration(ms: number): string {
+  return `${(ms / 1000).toLocaleString('en-US', { maximumFractionDigits: 1, minimumFractionDigits: 1 })}s`;
 }
 
 export type SummaryPart = { text: string } | { text: string; href: string; title: string };

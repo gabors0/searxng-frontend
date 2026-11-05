@@ -2,6 +2,7 @@
   import { aiSummary } from './ai-summary.svelte';
   import {
     formatCost,
+    formatDuration,
     linkCitations,
     MODEL,
     sourcesFor,
@@ -20,6 +21,7 @@
   let sources = $state.raw<Source[]>([]);
   let cutOff = $state(false);
   let cost = $state<number | undefined>(undefined);
+  let duration = $state<number | undefined>(undefined);
   let failure = $state.raw<SummaryError | null>(null);
   let loading = $state(false);
   let attempt = $state(0);
@@ -33,10 +35,11 @@
     failure = null;
     cutOff = false;
     cost = undefined;
+    duration = undefined;
 
     const cached = cachedSummary(currentQuery);
     if (cached) {
-      ({ text, sources, cutOff, cost } = cached);
+      ({ text, sources, cutOff, cost, duration } = cached);
       loading = false;
       return;
     }
@@ -50,6 +53,7 @@
         saveSummary(currentQuery, summary, aiSummary.choice === 'on');
         cutOff = summary.cutOff;
         cost = summary.cost;
+        duration = summary.duration;
         loading = false;
       },
       (error: SummaryError) => {
@@ -97,8 +101,13 @@
   <!-- The provider prefix is dropped; the full id is in the tooltip. -->
   <p class="mt-3 flex justify-between gap-4 border-t border-line pt-2 font-mono text-[0.8rem] text-muted">
     <span class="truncate" title={MODEL}>{MODEL.split('/').pop()}</span>
-    {#if cost !== undefined}
-      <span class="flex-none" title="Cost of this request">{formatCost(cost)}</span>
-    {/if}
+    <span class="flex flex-none gap-4">
+      {#if duration !== undefined}
+        <span title="Time this request took">{formatDuration(duration)}</span>
+      {/if}
+      {#if cost !== undefined}
+        <span title="Cost of this request">{formatCost(cost)}</span>
+      {/if}
+    </span>
   </p>
 </section>
