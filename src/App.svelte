@@ -150,7 +150,8 @@
 {/snippet}
 
 <div class="mx-auto max-w-304 px-4 pt-4 pb-12">
-  <header class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center sm:flex">
+  <!-- relative so the search suggestions can span the whole header on a thin screen. -->
+  <header class="relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-center sm:flex">
     {#if logo.style === 'clock'}
       <LogoClock class="mr-4 h-11 w-auto flex-none fill-black dark:fill-white" hours={logo.hours} />
     {:else}
@@ -293,7 +294,7 @@
 
         <!--
           The side column holds the summary and infoboxes. Below the two-column width it dissolves into the grid,
-          lifting the summary above the results while infoboxes stay after them.
+          lifting the summary and then the infoboxes above the results, so a thin screen opens on the overview.
         -->
         {#if canSummarize || response.infoboxes.length}
           <aside class="rise-in flex min-w-0 flex-col gap-8 max-[66rem]:contents">
@@ -328,7 +329,9 @@
               </div>
             {/if}
             {#each response.infoboxes as infobox}
-              <InfoboxCard {infobox} />
+              <div class="min-w-0 max-[66rem]:order-first max-[66rem]:max-w-184">
+                <InfoboxCard {infobox} />
+              </div>
             {/each}
           </aside>
         {/if}

@@ -90,7 +90,8 @@
   onDestroy(cancel);
 </script>
 
-<div class="relative -mb-px flex min-w-40 flex-1 max-sm:mb-0 max-sm:min-w-0">
+<!-- Below sm the box gives up positioning, so the suggestions hang from the header at its full width instead. -->
+<div class="relative -mb-px flex min-w-40 flex-1 max-sm:static max-sm:mb-0 max-sm:min-w-0">
   <input
     class="min-w-0 flex-1 border-b-2 border-transparent pr-3 pl-[0.2rem] outline-none focus:border-b-2 focus:border-accent max-sm:h-11 max-sm:border-b max-sm:border-line-strong"
     bind:this={element}
@@ -117,7 +118,7 @@
       The sliding accent bar marks the highlighted one.
     -->
     <ul
-      class="appear slide-underline absolute top-full right-0 left-0 z-20 flex flex-wrap gap-x-5 gap-y-1 border border-t-0 border-line-strong bg-surface px-3 pt-2 pb-2 shadow-[0_0.75rem_1.5rem_-0.5rem_rgb(0_0_0/0.35)]"
+      class="appear slide-underline absolute top-full right-0 left-0 z-20 max-sm:top-11 max-sm:border-t flex flex-wrap gap-x-5 gap-y-1 border border-t-0 border-line-strong bg-surface px-3 pt-2 pb-2 shadow-[0_0.75rem_1.5rem_-0.5rem_rgb(0_0_0/0.35)]"
       {id}
       role="listbox"
       aria-label="Suggestions"
