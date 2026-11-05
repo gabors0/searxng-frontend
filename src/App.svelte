@@ -14,6 +14,7 @@
   import LogoSetting from './lib/LogoSetting.svelte';
   import ResultList from './lib/ResultList.svelte';
   import { searchPrefs } from './lib/search-prefs.svelte';
+  import SearchBox from './lib/SearchBox.svelte';
   import SearchSettings from './lib/SearchSettings.svelte';
   import SectionTitle from './lib/SectionTitle.svelte';
   import Spinner from './lib/Spinner.svelte';
@@ -33,7 +34,7 @@
   let error = $state<string | null>(null);
   let loading = $state(false);
   let attempt = $state(0);
-  let inputElement: HTMLInputElement;
+  let inputElement = $state<HTMLInputElement>();
 
   // Set by the button when the setting is off. A new search makes a new route, which brings the button back.
   let askedFor = $state.raw<Route | null>(null);
@@ -87,7 +88,7 @@
   });
 
   onMount(() => {
-    if (!route.q) inputElement.focus();
+    if (!route.q) inputElement?.focus();
   });
 
   function navigate(next: Route) {
@@ -173,17 +174,7 @@
       method="get"
       onsubmit={submit}
     >
-      <input
-        class="-mb-px min-w-40 flex-1 border-b-2 border-transparent pr-3 pl-[0.2rem] outline-none focus:border-b-2 focus:border-accent max-sm:mb-0 max-sm:h-11 max-sm:w-full max-sm:min-w-0 max-sm:border-b max-sm:border-line-strong"
-        bind:this={inputElement}
-        bind:value={input}
-        type="search"
-        name="q"
-        aria-label="Search query"
-        placeholder="Search the web"
-        autocomplete="off"
-        enterkeyhint="search"
-      />
+      <SearchBox bind:value={input} bind:element={inputElement} onpick={(q) => navigate({ ...route, q, page: 1 })} />
       <nav
         class="slide-underline relative flex gap-5 max-sm:col-span-full max-sm:row-start-2 max-sm:mt-1 max-sm:min-h-11 max-sm:border-b max-sm:border-line-strong"
         aria-label="Categories"

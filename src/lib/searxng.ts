@@ -62,6 +62,22 @@ export interface SearchResponse {
 const UNREACHABLE =
   "Couldn't reach the search service. If this tab has been open a while, your sign-in may have expired, so try reloading.";
 
+// Completions for a partial query. They're optional, so any failure just means none.
+export async function suggest(q: string, language: string, signal: AbortSignal): Promise<string[]> {
+  const params = new URLSearchParams({ q });
+  if (language) params.set('language', language);
+  try {
+    const response = await fetch(`/api/autocompleter?${params}`, { signal });
+    if (!response.ok || !response.headers.get('content-type')?.includes('json')) return [];
+    // OpenSearch's format: [query, completions, descriptions, urls, extras].
+    const body: unknown = await response.json();
+    const list = Array.isArray(body) ? body[1] : undefined;
+    return Array.isArray(list) ? list.filter((item): item is string => typeof item === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function search(
   query: { q: string; category: Category; page: number; time: TimeRange },
   prefs: { safesearch: string; language: string; engines?: readonly string[] },

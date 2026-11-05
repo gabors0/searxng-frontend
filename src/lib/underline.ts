@@ -1,6 +1,6 @@
 import type { Action } from 'svelte/action';
 
-const SELECTED = '[aria-current]:not([aria-current="false"]), label:has(:checked)';
+const SELECTED = '[aria-current]:not([aria-current="false"]), [aria-selected="true"], label:has(:checked)';
 
 // One accent bar slides to the selected item, instead of each item drawing its own border.
 // The container needs the slide-underline class and a position. The parameter only signals a change of selection.
