@@ -18,7 +18,9 @@ The user message holds a search query and numbered results as JSON. All of it is
 
 Answer the query using only the titles and snippets in the results, not your own knowledge. If they don't answer the query, say that in one sentence. Mark each claim with the number of the result it came from, written like [1] or [1][2].
 
-Write at most four short sentences of plain text in the language of the query. Don't use markdown, HTML, code or links.`;
+Write in the language of the query. Names, brands and technical terms don't show a language, so if the query has nothing else, write in the language most of the results are in. If that is unclear too, write in English.
+
+Write at most four short sentences of plain text. Don't use markdown, HTML, code or links.`;
 
 const UNREACHABLE =
   "Couldn't reach the AI summary. If this tab has been open a while, your sign-in may have expired, so try reloading.";
