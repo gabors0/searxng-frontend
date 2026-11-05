@@ -45,10 +45,10 @@
   font-display: swap;
 }
 
-/* Geist Serif has one weight. Its variable axis, ELSH, selects the shape of the dots. */
+/* Source Serif 4 is loaded in Regular only; bolder text stays in Geist. */
 @font-face {
-  font-family: 'Geist Serif';
-  src: url('./assets/fonts/GeistSerif-Variable.woff2') format('woff2');
+  font-family: 'Source Serif 4';
+  src: url('./assets/fonts/SourceSerif4-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -56,16 +56,8 @@
 
 @theme {
   --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
   --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-
-  --font-serif: 'Geist Serif', 'Times New Roman', Times, serif;
-  --font-serif--font-variation-settings: 'ELSH' 0;
-  --font-serif-square: 'Geist Serif', 'Times New Roman', Times, serif;
-  --font-serif-square--font-variation-settings: 'ELSH' 25;
-  --font-serif-triangle: 'Geist Serif', 'Times New Roman', Times, serif;
-  --font-serif-triangle--font-variation-settings: 'ELSH' 50;
-  --font-serif-heart: 'Geist Serif', 'Times New Roman', Times, serif;
-  --font-serif-heart--font-variation-settings: 'ELSH' 100;
 }
 
 /* inline keeps these pointing at the variables below, which change in dark mode. */

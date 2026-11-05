@@ -12,6 +12,7 @@
   import LogoSetting from './lib/LogoSetting.svelte';
   import ResultList from './lib/ResultList.svelte';
   import SectionTitle from './lib/SectionTitle.svelte';
+  import Spinner from './lib/Spinner.svelte';
   import ThemeSetting from './lib/ThemeSetting.svelte';
   import { CATEGORIES, hrefFor, readRoute, type Route } from './lib/route';
   import { search, type SearchResponse } from './lib/searxng';
@@ -185,10 +186,7 @@
 
   <div class="flex min-h-7 items-center gap-2 text-sm/normal text-muted" role="status">
     {#if loading}
-      <span
-        class="size-[0.8rem] animate-spin rounded-full border-2 border-line-strong border-t-accent [animation-duration:0.8s] motion-reduce:[animation-duration:3s]"
-        aria-hidden="true"
-      ></span>
+      <Spinner />
       <span>Searching…</span>
     {/if}
   </div>
@@ -232,7 +230,7 @@
               <SectionTitle title="Answer">
                 {#snippet aside()}<span class="truncate">{answer.engine}</span>{/snippet}
               </SectionTitle>
-              <p class="text-[1.1rem] font-semibold wrap-anywhere">{answer.answer}</p>
+              <p class="font-serif text-[1.2rem] wrap-anywhere">{answer.answer}</p>
             </section>
           {/each}
 

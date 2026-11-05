@@ -22,7 +22,7 @@
     <img class="mb-3 block max-h-56 max-w-full bg-line" src={image} alt="" loading="lazy" referrerpolicy="no-referrer" />
   {/if}
   {#if infobox.content}
-    <p class="mb-3 text-[0.92rem]">{infobox.content}</p>
+    <p class="mb-3 font-serif text-[1rem]">{infobox.content}</p>
   {/if}
   {#if attributes.length}
     <dl class="mb-3 grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] text-[0.85rem]">

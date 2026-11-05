@@ -11,6 +11,7 @@
   } from './openrouter';
   import type { SearchResult } from './searxng';
   import SectionTitle from './SectionTitle.svelte';
+  import Spinner from './Spinner.svelte';
   import { cachedSummary, saveSummary } from './summary-cache';
 
   let { query, results }: { query: string; results: SearchResult[] } = $props();
@@ -68,17 +69,14 @@
   >
     {#snippet aside()}
       {#if loading}
-        <span
-          class="size-[0.8rem] flex-none animate-spin rounded-full border-2 border-line-strong border-t-accent [animation-duration:0.8s] motion-reduce:[animation-duration:3s]"
-          aria-hidden="true"
-        ></span>
+        <Spinner />
       {/if}
     {/snippet}
   </SectionTitle>
 
   {#if text}
     <!-- Model output is untrusted: it only ever renders as text, plus links to real results. -->
-    <p class="wrap-anywhere whitespace-pre-wrap">{#each parts as part}{#if 'href' in part}<a class="text-[0.8em] font-semibold text-accent no-underline hover:underline" href={part.href} title={part.title} rel="noreferrer">{part.text}</a>{:else}{part.text}{/if}{/each}</p>
+    <p class="font-serif text-[1.05rem] wrap-anywhere whitespace-pre-wrap">{#each parts as part}{#if 'href' in part}<a class="font-sans text-[0.75em] font-semibold text-accent no-underline hover:underline" href={part.href} title={part.title} rel="noreferrer">{part.text}</a>{:else}{part.text}{/if}{/each}</p>
   {:else if loading}
     <p class="text-muted">Summarizing…</p>
   {/if}
