@@ -21,6 +21,18 @@ export const TIME_RANGES: { id: TimeRange; label: string }[] = [
   { id: 'year', label: 'Year' },
 ];
 
+// A leading "-" asks for an AI summary of that search, even with the setting off. It's removed before searching,
+// because engines read "-word" as leaving that word out.
+const SUMMARY_PREFIX = /^-\s*/;
+
+export function wantsSummary(q: string): boolean {
+  return SUMMARY_PREFIX.test(q);
+}
+
+export function searchText(q: string): string {
+  return q.replace(SUMMARY_PREFIX, '');
+}
+
 export function readRoute(search: string): Route {
   const params = new URLSearchParams(search);
   const category = params.get('category');

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
+  import { searchText, wantsSummary } from './route';
   import { searchPrefs } from './search-prefs.svelte';
   import { suggest } from './searxng';
   import { underline } from './underline';
@@ -24,8 +25,10 @@
   let controller: AbortController | undefined;
 
   const expanded = $derived(suggestions.length > 0);
+  // Completions are for the search itself, so a summary request's "-" goes back in front of the one picked.
+  const marker = $derived(wantsSummary(typed.trim()) ? '-' : '');
   // The part a suggestion shares with the query stays regular, so the completion stands out.
-  const prefix = $derived(typed.trim().toLowerCase());
+  const prefix = $derived(searchText(typed.trim()).toLowerCase());
 
   function cancel() {
     clearTimeout(timer);
@@ -43,7 +46,7 @@
     typed = value;
     active = -1;
     cancel();
-    const q = value.trim();
+    const q = searchText(value.trim());
     if (!q) {
       suggestions = [];
       return;
@@ -69,7 +72,7 @@
       const stops = suggestions.length + 1;
       const step = event.key === 'ArrowDown' || event.key === 'ArrowRight' ? 1 : -1;
       active = ((active + 1 + step + stops) % stops) - 1;
-      value = suggestions[active] ?? typed;
+      value = active >= 0 ? marker + suggestions[active] : typed;
     } else if (event.key === 'Escape' && expanded) {
       // A search input would otherwise clear itself as well.
       event.preventDefault();
@@ -81,7 +84,8 @@
     }
   }
 
-  function pick(q: string) {
+  function pick(suggestion: string) {
+    const q = marker + suggestion;
     value = q;
     close();
     onpick(q);

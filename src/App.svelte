@@ -19,7 +19,7 @@
   import SectionTitle from './lib/SectionTitle.svelte';
   import Spinner from './lib/Spinner.svelte';
   import ThemeSetting from './lib/ThemeSetting.svelte';
-  import { CATEGORIES, hrefFor, readRoute, TIME_RANGES, type Route } from './lib/route';
+  import { CATEGORIES, hrefFor, readRoute, searchText, TIME_RANGES, wantsSummary, type Route } from './lib/route';
   import { search, type SearchResponse } from './lib/searxng';
   import { cachedSummary } from './lib/summary-cache';
   import { underline } from './lib/underline';
@@ -49,7 +49,11 @@
       shown.response.results.length > 0,
   );
   const summarize = $derived(
-    canSummarize && (aiSummary.choice === 'on' || askedFor === route || cachedSummary(route.q) !== undefined),
+    canSummarize &&
+      (aiSummary.choice === 'on' ||
+        askedFor === route ||
+        wantsSummary(route.q) ||
+        cachedSummary(searchText(route.q)) !== undefined),
   );
 
   $effect(() => {
@@ -72,7 +76,7 @@
 
     const controller = new AbortController();
     loading = true;
-    search(current, prefs, controller.signal).then(
+    search({ ...current, q: searchText(current.q) }, prefs, controller.signal).then(
       (response) => {
         shown = { route: current, response };
         loading = false;
@@ -125,7 +129,9 @@
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    navigate({ ...route, q: input.trim(), page: 1 });
+    const q = input.trim();
+    // A lone "-" has nothing to search for, so it goes back to the start page like an empty box.
+    navigate({ ...route, q: searchText(q) ? q : '', page: 1 });
   }
 
   const pageStep =
@@ -301,7 +307,7 @@
             {#if canSummarize}
               <div class="max-[66rem]:order-first max-[66rem]:max-w-184">
                 {#if summarize}
-                  <AiSummary query={shown.route.q} results={response.results} />
+                  <AiSummary query={searchText(shown.route.q)} results={response.results} />
                 {:else}
                   <!-- Same heading as the summary, so the button turns into it in place. -->
                   <section aria-label="AI summary">
@@ -309,7 +315,7 @@
                       title="AI summary"
                       info={{
                         id: 'ai-summary-offer-info',
-                        text: 'Clicking sends your query and the result snippets to OpenRouter.',
+                        text: 'Clicking sends your query and the result snippets to OpenRouter. Starting a search with - does the same.',
                       }}
                     >
                       {#snippet action()}
