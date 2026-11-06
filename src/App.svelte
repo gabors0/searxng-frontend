@@ -3,8 +3,8 @@
   import logoBlack from './assets/logo-black.svg';
   import logoWhite from './assets/logo-white.svg';
   import { aiSummary } from './lib/ai-summary.svelte';
-  import AiSetting from './lib/AiSetting.svelte';
   import AiSummary from './lib/AiSummary.svelte';
+  import AiToggle from './lib/AiToggle.svelte';
   import { chosenEngines } from './lib/engines.svelte';
   import EnginesPage from './lib/EnginesPage.svelte';
   import ImageGrid from './lib/ImageGrid.svelte';
@@ -36,9 +36,6 @@
   let attempt = $state(0);
   let inputElement = $state<HTMLInputElement>();
 
-  // Set by the button when the setting is off. A new search makes a new route, which brings the button back.
-  let askedFor = $state.raw<Route | null>(null);
-
   // Comparing routes ends a summary as soon as a new search starts, while the old results are still on screen.
   const canSummarize = $derived(
     shown?.route === route &&
@@ -51,7 +48,6 @@
   const summarize = $derived(
     canSummarize &&
       (aiSummary.choice === 'on' ||
-        askedFor === route ||
         wantsSummary(route.q) ||
         cachedSummary(searchText(route.q)) !== undefined),
   );
@@ -209,17 +205,22 @@
     </form>
   </header>
 
-  <div class="flex min-h-7 items-center gap-2 text-sm/normal text-muted" role="status">
-    {#if loading}
-      <Spinner />
-      <span>Searching…</span>
-    {/if}
+  <!-- The AI switch sits under the logo on every page, with the search progress beside it. The header, this line,
+    the time ranges and the results are spaced evenly, 0.75rem apart. -->
+  <div class="my-3 flex items-center gap-5 text-sm/normal text-muted">
+    <AiToggle />
+    <div class="flex min-w-0 items-center gap-2" role="status">
+      {#if loading}
+        <Spinner />
+        <span>Searching…</span>
+      {/if}
+    </div>
   </div>
 
   <main class="transition-opacity duration-200" class:opacity-55={loading}>
     {#if view === 'search' && route.q}
       <nav
-        class="slide-underline relative mb-6 flex flex-wrap gap-x-4 gap-y-1 text-sm"
+        class="slide-underline relative mb-3 flex flex-wrap gap-x-4 gap-y-1 text-sm/normal"
         aria-label="Time range"
         use:underline={route.time}
       >
@@ -247,7 +248,6 @@
             >{Object.keys(chosenEngines).length ? 'Customized' : 'Server default'} &gt;&gt;&gt;</a
           >
         </div>
-        <AiSetting />
       </div>
     {:else if error}
       <div class="max-w-184" role="alert">
@@ -302,36 +302,11 @@
           The side column holds the summary and infoboxes. Below the two-column width it dissolves into the grid,
           lifting the summary and then the infoboxes above the results, so a thin screen opens on the overview.
         -->
-        {#if canSummarize || response.infoboxes.length}
+        {#if summarize || response.infoboxes.length}
           <aside class="rise-in flex min-w-0 flex-col gap-8 max-[66rem]:contents">
-            {#if canSummarize}
+            {#if summarize}
               <div class="max-[66rem]:order-first max-[66rem]:max-w-184">
-                {#if summarize}
-                  <AiSummary query={searchText(shown.route.q)} results={response.results} />
-                {:else}
-                  <!-- Same heading as the summary, so the button turns into it in place. -->
-                  <section aria-label="AI summary">
-                    <SectionTitle
-                      title="AI summary"
-                      info={{
-                        id: 'ai-summary-offer-info',
-                        text: 'Clicking sends your query and the result snippets to OpenRouter. Starting a search with - does the same.',
-                      }}
-                    >
-                      {#snippet action()}
-                        <!-- The arrows close the line, like the header's search button. -->
-                        <button
-                          class="-mb-px flex flex-none items-center gap-2 py-1"
-                          type="button"
-                          aria-label="Summarize these results"
-                          onclick={() => (askedFor = route)}
-                        >
-                          Summarize <span class="font-bold">&gt;&gt;&gt;</span>
-                        </button>
-                      {/snippet}
-                    </SectionTitle>
-                  </section>
-                {/if}
+                <AiSummary query={searchText(shown.route.q)} results={response.results} />
               </div>
             {/if}
             {#each response.infoboxes as infobox}
