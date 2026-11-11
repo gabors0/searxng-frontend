@@ -221,7 +221,7 @@
   {#if canAsk}
     <form class="mt-4 flex items-center gap-3" onsubmit={ask}>
       <input
-        class="min-w-0 flex-1 border-b border-line-strong bg-transparent py-1 placeholder:text-muted focus:border-accent"
+        class="min-w-0 flex-1 border-b border-line-strong bg-transparent py-1 outline-none placeholder:text-muted focus:border-accent"
         type="text"
         bind:value={draft}
         maxlength={MAX_QUESTION_LENGTH}
