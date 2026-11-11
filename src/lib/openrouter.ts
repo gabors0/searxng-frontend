@@ -1,4 +1,4 @@
-import { safeUrl, type SearchResult } from './searxng';
+import { resultImage, safeUrl, type SearchResult } from './searxng';
 
 export const MODEL = 'anthropic/claude-haiku-5.5';
 
@@ -334,7 +334,7 @@ async function readStream(
 
 // Sources are saved with the summary, so data: URLs and very long ones are left out.
 function sourceImage(result: SearchResult): string | undefined {
-  const image = safeUrl(result.thumbnail || result.img_src || result.thumbnail_src);
+  const image = resultImage(result);
   return image && image.length <= MAX_IMAGE_URL_LENGTH ? image : undefined;
 }
 

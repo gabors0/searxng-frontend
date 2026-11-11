@@ -150,6 +150,17 @@ export async function fetchEngines(signal: AbortSignal): Promise<EngineInfo[]> {
   }));
 }
 
+// The picture a result came with, whichever field its engine filled.
+export function resultImage(result: Pick<SearchResult, 'thumbnail' | 'img_src' | 'thumbnail_src'>): string | undefined {
+  return safeUrl(result.thumbnail || result.img_src || result.thumbnail_src);
+}
+
+// Where most sites keep their icon. Sites that don't simply show none.
+export function faviconUrl(url: string | null | undefined): string | undefined {
+  const safe = safeUrl(url);
+  return safe && `${new URL(safe).origin}/favicon.ico`;
+}
+
 // Result URLs come from third-party engines, so block schemes like javascript:.
 export function safeUrl(url: string | null | undefined): string | undefined {
   if (!url) return undefined;
