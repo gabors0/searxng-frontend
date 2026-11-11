@@ -6,6 +6,8 @@ const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 interface Saved {
   query: string;
+  // The search settings the results came from; see summaryVariant. Missing on summaries saved before it was tracked.
+  variant?: string;
   savedAt: number;
   summary: Summary;
 }
@@ -47,6 +49,7 @@ function isSaved(value: any): value is Saved {
   const followUps = value?.summary?.followUps;
   return (
     typeof value?.query === 'string' &&
+    (value.variant === undefined || typeof value.variant === 'string') &&
     typeof value.savedAt === 'number' &&
     typeof value.summary?.text === 'string' &&
     typeof value.summary.cutOff === 'boolean' &&
@@ -75,15 +78,27 @@ function write(entries: Saved[]) {
   }
 }
 
-export function cachedSummary(query: string): Summary | undefined {
-  const key = normalize(query);
-  return [...read(), ...memory].find((saved) => saved.query === key && isFresh(saved))?.summary;
+// Results depend on these settings, so a summary only stands in for a search made with the same ones.
+// The server's defaults give '', which also matches summaries saved before settings were tracked.
+export function summaryVariant(prefs: { safesearch: string; language: string; engines?: readonly string[] }): string {
+  const engines = [...(prefs.engines ?? [])].sort();
+  if (!prefs.safesearch && !prefs.language && !engines.length) return '';
+  return JSON.stringify([prefs.safesearch, prefs.language, engines]);
 }
 
-export function saveSummary(query: string, summary: Summary, keep: boolean) {
-  const entry = { query: normalize(query), savedAt: Date.now(), summary };
+function matches(saved: Saved, query: string, variant: string): boolean {
+  return saved.query === query && (saved.variant ?? '') === variant;
+}
+
+export function cachedSummary(query: string, variant: string): Summary | undefined {
+  const key = normalize(query);
+  return [...read(), ...memory].find((saved) => matches(saved, key, variant) && isFresh(saved))?.summary;
+}
+
+export function saveSummary(query: string, variant: string, summary: Summary, keep: boolean) {
+  const entry: Saved = { query: normalize(query), variant, savedAt: Date.now(), summary };
   const withEntry = (entries: Saved[]) =>
-    [...entries.filter((saved) => saved.query !== entry.query), entry].slice(-MAX_SAVED);
+    [...entries.filter((saved) => !matches(saved, entry.query, variant)), entry].slice(-MAX_SAVED);
   memory = withEntry(memory);
   if (keep) write(withEntry(read()));
 }

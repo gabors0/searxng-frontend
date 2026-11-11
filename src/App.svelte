@@ -21,7 +21,7 @@
   import ThemeSetting from './lib/ThemeSetting.svelte';
   import { CATEGORIES, hrefFor, readRoute, searchText, TIME_RANGES, wantsSummary, type Route } from './lib/route';
   import { search, type SearchResponse } from './lib/searxng';
-  import { cachedSummary } from './lib/summary-cache';
+  import { cachedSummary, summaryVariant } from './lib/summary-cache';
   import { underline } from './lib/underline';
 
   const initial = readRoute(location.search);
@@ -30,7 +30,8 @@
   // The engines page has its own path. Everything else is the search page, described by the query string.
   let view = $state<'search' | 'engines'>(location.pathname === '/engines' ? 'engines' : 'search');
   // The category travels with the response so the layout only switches once it arrives.
-  let shown = $state.raw<{ route: Route; response: SearchResponse } | null>(null);
+  // variant names the search settings the response was made with, which saved summaries are filed under.
+  let shown = $state.raw<{ route: Route; response: SearchResponse; variant: string } | null>(null);
   let error = $state<string | null>(null);
   let loading = $state(false);
   let attempt = $state(0);
@@ -49,7 +50,7 @@
     canSummarize &&
       (aiSummary.choice === 'on' ||
         wantsSummary(route.q) ||
-        cachedSummary(searchText(route.q)) !== undefined),
+        cachedSummary(searchText(route.q), shown?.variant ?? '') !== undefined),
   );
 
   $effect(() => {
@@ -74,7 +75,7 @@
     loading = true;
     search({ ...current, q: searchText(current.q) }, prefs, controller.signal).then(
       (response) => {
-        shown = { route: current, response };
+        shown = { route: current, response, variant: summaryVariant(prefs) };
         loading = false;
       },
       (failure: Error) => {
@@ -305,8 +306,9 @@
         {#if summarize || response.infoboxes.length}
           <aside class="rise-in flex min-w-0 flex-col gap-8 max-[66rem]:contents">
             {#if summarize}
-              <div class="max-[66rem]:order-first max-[66rem]:max-w-184">
-                <AiSummary query={searchText(shown.route.q)} results={response.results} />
+              <!-- Raised so a citation's preview card covers the infoboxes, which would otherwise paint over it. -->
+              <div class="relative z-10 max-[66rem]:order-first max-[66rem]:max-w-184">
+                <AiSummary query={searchText(shown.route.q)} variant={shown.variant} results={response.results} />
               </div>
             {/if}
             {#each response.infoboxes as infobox}

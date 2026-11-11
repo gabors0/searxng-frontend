@@ -1,5 +1,6 @@
 <script lang="ts">
   import { linkCitations, type Source, type SummaryPart } from './openrouter';
+  import { faviconUrl } from './searxng';
 
   let {
     text,
@@ -50,7 +51,7 @@
       title: active.source.title || host,
       snippet: active.source.snippet,
       image: imageFailed ? undefined : active.source.image,
-      icon: iconFailed ? undefined : `${url.origin}/favicon.ico`,
+      icon: iconFailed ? undefined : faviconUrl(active.href),
     };
   });
 
@@ -63,6 +64,23 @@
 
   function hide() {
     active = null;
+    tapped = null;
+  }
+
+  // Touch has no hover, so the first tap on a citation opens its preview and a second tap follows the link.
+  let touch = false;
+  let tapped: number | null = null;
+
+  function tap(event: MouseEvent, piece: { start: number; href: string; source: Source }) {
+    if (!touch || tapped === piece.start) return;
+    event.preventDefault();
+    show(event, piece);
+    tapped = piece.start;
+  }
+
+  // A tap anywhere else closes the preview, since touch has no mouseleave to count on.
+  function onWindowPointerDown(event: PointerEvent) {
+    if (active && !(event.target instanceof Node && active.link.contains(event.target))) hide();
   }
 
   // A citation replaced by new text never gets a mouseleave.
@@ -89,9 +107,11 @@
   });
 </script>
 
+<svelte:window onpointerdown={onWindowPointerDown} />
+
 <div class="relative" bind:this={wrapper}>
   <!-- Model output is untrusted: it only ever renders as text, plus links to real results. -->
-  <p class="font-serif text-[1.05rem] wrap-anywhere whitespace-pre-wrap">{#each pieces as piece (piece.start)}{#if 'href' in piece}<a class="ink font-sans text-[0.75em] font-semibold text-accent no-underline hover:underline" href={piece.href} rel="noreferrer" aria-describedby={active?.start === piece.start ? id : undefined} onmouseenter={(event) => show(event, piece)} onmouseleave={hide} onfocus={(event) => show(event, piece)} onblur={hide} onkeydown={(event) => { if (event.key === 'Escape') hide(); }}>{piece.text}</a>{:else}<span class="ink">{piece.text}</span>{/if}{/each}{#if writing}<span class="caret" aria-hidden="true"></span>{/if}</p>
+  <p class="font-serif text-[1.05rem] wrap-anywhere whitespace-pre-wrap">{#each pieces as piece (piece.start)}{#if 'href' in piece}<a class="ink font-sans text-[0.75em] font-semibold text-accent no-underline hover:underline" href={piece.href} rel="noreferrer" aria-describedby={active?.start === piece.start ? id : undefined} onmouseenter={(event) => show(event, piece)} onmouseleave={hide} onfocus={(event) => show(event, piece)} onblur={hide} onpointerdown={(event) => (touch = event.pointerType !== 'mouse')} onclick={(event) => tap(event, piece)} onkeydown={(event) => { touch = false; if (event.key === 'Escape') hide(); }}>{piece.text}</a>{:else}<span class="ink">{piece.text}</span>{/if}{/each}{#if writing}<span class="caret" aria-hidden="true"></span>{/if}</p>
 
   <!-- A preview of the cited result. Its title and snippet come from the result site, so they render as text. -->
   {#if preview}

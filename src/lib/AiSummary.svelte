@@ -24,7 +24,8 @@
   import Spinner from './Spinner.svelte';
   import { cachedSummary, saveSummary } from './summary-cache';
 
-  let { query, results }: { query: string; results: SearchResult[] } = $props();
+  // variant names the search settings the results came from, so a saved summary is only reused for the same ones.
+  let { query, variant, results }: { query: string; variant: string; results: SearchResult[] } = $props();
 
   let text = $state('');
   let sources = $state.raw<Source[]>([]);
@@ -67,6 +68,7 @@
   $effect(() => {
     const currentQuery = query;
     const currentResults = results;
+    const currentVariant = variant;
     attempt;
     starts = [];
     failure = null;
@@ -77,7 +79,7 @@
     followUpFailure = null;
     draft = '';
 
-    const cached = cachedSummary(currentQuery);
+    const cached = cachedSummary(currentQuery, currentVariant);
     if (cached) {
       ({ text, sources, cutOff, cost, duration } = cached);
       followUps = cached.followUps ?? [];
@@ -95,7 +97,7 @@
         text = partial;
       }).then(
       (summary) => {
-        saveSummary(currentQuery, summary, aiSummary.choice === 'on');
+        saveSummary(currentQuery, currentVariant, summary, aiSummary.choice === 'on');
         cutOff = summary.cutOff;
         cost = summary.cost;
         duration = summary.duration;
@@ -126,6 +128,7 @@
     if (!question || !canAsk || pending) return;
 
     const currentQuery = query;
+    const currentVariant = variant;
     const base = current();
     const controller = (followUpController = new AbortController());
     pending = { question, text: '' };
@@ -146,7 +149,7 @@
       (followUp) => {
         followUps = [...followUps, followUp];
         pending = null;
-        saveSummary(currentQuery, current(), aiSummary.choice === 'on');
+        saveSummary(currentQuery, currentVariant, current(), aiSummary.choice === 'on');
       },
       (error: SummaryError) => {
         if (controller.signal.aborted) return;
