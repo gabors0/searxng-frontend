@@ -27,7 +27,8 @@ function isSource(value: any): boolean {
   return (
     typeof value?.title === 'string' &&
     typeof value.url === 'string' &&
-    (value.snippet === undefined || typeof value.snippet === 'string')
+    (value.snippet === undefined || typeof value.snippet === 'string') &&
+    (value.image === undefined || typeof value.image === 'string')
   );
 }
 

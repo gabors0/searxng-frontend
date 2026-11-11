@@ -15,6 +15,8 @@ export interface SearchResult {
   publishedDate: string | null;
   metadata?: string;
   img_src: string;
+  // Not in the captures, which had no pictures on General results. From MainResult in searx/result_types/_base.py.
+  thumbnail?: string;
   // Only on image results.
   thumbnail_src?: string;
   resolution?: string;

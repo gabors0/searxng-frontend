@@ -12,6 +12,8 @@ const MAX_TITLE_LENGTH = 150;
 const MAX_URL_LENGTH = 200;
 const MAX_SNIPPET_LENGTH = 400;
 const MAX_SEARCH_LENGTH = 200;
+// Never sent to the model; this only bounds what the saved summaries hold.
+const MAX_IMAGE_URL_LENGTH = 1000;
 // Stays under the request_body limit in the Caddyfile.
 const MAX_BODY_BYTES = 120_000;
 
@@ -59,6 +61,8 @@ export interface Source {
   url: string;
   // Kept so follow-up questions see the same results as the summary. Missing on summaries cached before follow-ups.
   snippet?: string;
+  // The result's own picture, for the preview shown over a citation. Most results have none.
+  image?: string;
 }
 
 export interface Reply {
@@ -328,10 +332,21 @@ async function readStream(
   return { text, cost, cutOff: finishReason !== undefined && finishReason !== 'stop' };
 }
 
+// Sources are saved with the summary, so data: URLs and very long ones are left out.
+function sourceImage(result: SearchResult): string | undefined {
+  const image = safeUrl(result.thumbnail || result.img_src || result.thumbnail_src);
+  return image && image.length <= MAX_IMAGE_URL_LENGTH ? image : undefined;
+}
+
 export function sourcesFor(results: SearchResult[]): Source[] {
   return results
     .slice(0, MAX_RESULTS)
-    .map(({ title, url, content }) => ({ title, url, snippet: clean(content, MAX_SNIPPET_LENGTH) }));
+    .map((result) => ({
+      title: result.title,
+      url: result.url,
+      snippet: clean(result.content, MAX_SNIPPET_LENGTH),
+      image: sourceImage(result),
+    }));
 }
 
 async function streamReply(
@@ -463,7 +478,7 @@ export function formatDuration(ms: number): string {
   return `${(ms / 1000).toLocaleString('en-US', { maximumFractionDigits: 1, minimumFractionDigits: 1 })}s`;
 }
 
-export type SummaryPart = { text: string } | { text: string; href: string; title: string };
+export type SummaryPart = { text: string } | { text: string; href: string; source: Source };
 
 // Numbers come from the model, so only ones matching a real result become links.
 export function linkCitations(text: string, sources: Source[]): SummaryPart[] {
@@ -474,6 +489,6 @@ export function linkCitations(text: string, sources: Source[]): SummaryPart[] {
       const number = /^\[(\d+)\]$/.exec(part)?.[1];
       const source = number ? sources[Number(number) - 1] : undefined;
       const href = safeUrl(source?.url);
-      return source && href ? { text: part, href, title: source.title } : { text: part };
+      return source && href ? { text: part, href, source } : { text: part };
     });
 }
