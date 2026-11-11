@@ -23,14 +23,35 @@ function isFresh(saved: Saved): boolean {
   return age >= 0 && age < MAX_AGE_MS;
 }
 
+function isSource(value: any): boolean {
+  return (
+    typeof value?.title === 'string' &&
+    typeof value.url === 'string' &&
+    (value.snippet === undefined || typeof value.snippet === 'string')
+  );
+}
+
+function isFollowUp(value: any): boolean {
+  const search = value?.search;
+  return (
+    typeof value?.question === 'string' &&
+    typeof value.text === 'string' &&
+    typeof value.cutOff === 'boolean' &&
+    (search === undefined ||
+      (typeof search?.query === 'string' && Array.isArray(search.sources) && search.sources.every(isSource)))
+  );
+}
+
 function isSaved(value: any): value is Saved {
+  const followUps = value?.summary?.followUps;
   return (
     typeof value?.query === 'string' &&
     typeof value.savedAt === 'number' &&
     typeof value.summary?.text === 'string' &&
     typeof value.summary.cutOff === 'boolean' &&
     Array.isArray(value.summary.sources) &&
-    value.summary.sources.every((source: any) => typeof source?.title === 'string' && typeof source.url === 'string')
+    value.summary.sources.every(isSource) &&
+    (followUps === undefined || (Array.isArray(followUps) && followUps.every(isFollowUp)))
   );
 }
 

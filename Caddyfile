@@ -46,8 +46,9 @@
 		header @noKey Content-Type application/json
 		respond @noKey `{"error":{"code":"not_configured"}}` 503
 
+		# Follow-ups carry the conversation so far, including results from their searches.
 		request_body {
-			max_size 32KB
+			max_size 128KB
 		}
 
 		rewrite * /api/v1/chat/completions
