@@ -2,7 +2,8 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { defineConfig, type Plugin } from 'vite';
+import type { Plugin } from 'vite';
+import { defineConfig } from 'vitest/config';
 
 // Runs the image proxy (imgproxy/main.go) alongside the dev server, so Save and Copy work in development.
 function imgproxy(): Plugin {
@@ -30,7 +31,14 @@ function imgproxy(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [tailwindcss(), svelte(), imgproxy()],
+  // Tests need neither the proxy nor a Go toolchain.
+  plugins: [tailwindcss(), svelte(), !process.env.VITEST && imgproxy()],
+  // Picks Svelte's browser build, so components can be mounted in tests.
+  resolve: process.env.VITEST ? { conditions: ['browser'] } : undefined,
+  test: {
+    environment: 'jsdom',
+    include: ['src/**/*.test.ts'],
+  },
   server: {
     proxy: {
       '/api': {
