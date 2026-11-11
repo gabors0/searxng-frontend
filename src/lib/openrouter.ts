@@ -173,8 +173,7 @@ function requestBody(query: string, sources: Source[], conversation?: Conversati
     messages: messages(query, sources, conversation),
     // Only follow-ups can search, and only once each. Earlier searches in the history still need the tool defined.
     ...(conversation && { tools: [SEARCH_TOOL], tool_choice: conversation.search ? 'none' : 'auto' }),
-    // Without this OpenRouter may route to a provider that ignores tools, so the model could never search.
-    provider: { zdr: true, sort: 'price', ...(conversation && { require_parameters: true }) },
+    provider: { zdr: true, sort: 'price' },
     stream: true,
     max_tokens: MAX_TOKENS,
     temperature: 0.2,
