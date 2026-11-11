@@ -84,6 +84,14 @@
     }
   }
 
+  // Empties the box and leaves the caret in it, ready for the next search. The results stay until then.
+  function clear() {
+    value = '';
+    typed = '';
+    close();
+    element?.focus();
+  }
+
   function pick(suggestion: string) {
     const q = marker + suggestion;
     value = q;
@@ -97,7 +105,7 @@
 <!-- Below sm the box gives up positioning, so the suggestions hang from the header at its full width instead. -->
 <div class="relative -mb-px flex min-w-40 flex-1 max-sm:static max-sm:mb-0 max-sm:min-w-0">
   <input
-    class="min-w-0 flex-1 border-b-2 border-transparent pr-3 pl-[0.2rem] outline-none focus:border-b-2 focus:border-accent max-sm:h-11 max-sm:border-b max-sm:border-line-strong"
+    class="peer min-w-0 flex-1 border-b-2 border-transparent pr-1 pl-[0.2rem] outline-none focus:border-b-2 focus:border-accent max-sm:h-11 max-sm:border-b max-sm:border-line-strong [&::-webkit-search-cancel-button]:hidden"
     bind:this={element}
     bind:value
     type="search"
@@ -115,6 +123,19 @@
     {onkeydown}
     onblur={close}
   />
+  <!--
+    Shown whenever there is text, in every browser; the built-in one of search inputs is hidden above.
+    It carries the input's bottom line on, so the two read as one box.
+  -->
+  {#if value}
+    <button
+      class="flex w-8 flex-none items-center justify-center rounded-none border-0 border-b-2 border-transparent p-0 text-muted peer-focus:border-accent hover:text-accent max-sm:h-11 max-sm:border-b max-sm:border-line-strong"
+      type="button"
+      aria-label="Clear search"
+      onmousedown={(event) => event.preventDefault()}
+      onclick={clear}>x</button
+    >
+  {/if}
   {#if expanded}
     <!--
       Suggestions run on like the related searches, wrapping onto new lines. The panel is a raised surface with the
