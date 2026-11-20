@@ -308,7 +308,12 @@
             {#if summarize}
               <!-- Raised so a citation's preview card covers the infoboxes, which would otherwise paint over it. -->
               <div class="relative z-10 max-[66rem]:order-first max-[66rem]:max-w-184">
-                <AiSummary query={searchText(shown.route.q)} variant={shown.variant} results={response.results} />
+                <AiSummary
+                  query={searchText(shown.route.q)}
+                  variant={shown.variant}
+                  results={response.results}
+                  link={queryLink}
+                />
               </div>
             {/if}
             {#each response.infoboxes as infobox}

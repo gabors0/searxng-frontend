@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import { aiSummary } from './ai-summary.svelte';
   import CitedText from './CitedText.svelte';
   import { chosenEngines } from './engines.svelte';
@@ -20,12 +21,19 @@
   } from './openrouter';
   import { search, type SearchResult } from './searxng';
   import { searchPrefs } from './search-prefs.svelte';
+  import SearchNote from './SearchNote.svelte';
   import SectionTitle from './SectionTitle.svelte';
   import Spinner from './Spinner.svelte';
   import { cachedSummary, saveSummary } from './summary-cache';
 
   // variant names the search settings the results came from, so a saved summary is only reused for the same ones.
-  let { query, variant, results }: { query: string; variant: string; results: SearchResult[] } = $props();
+  // link renders a query as a link to that search, for the searches the model runs.
+  let {
+    query,
+    variant,
+    results,
+    link,
+  }: { query: string; variant: string; results: SearchResult[]; link: Snippet<[string]> } = $props();
 
   let text = $state('');
   let sources = $state.raw<Source[]>([]);
@@ -189,10 +197,7 @@
   </SectionTitle>
 
   {#if summarySearch}
-    <!-- The model picks the query, so it renders as text. -->
-    <p class={['mb-1 text-[0.8rem] text-muted wrap-anywhere', !summarySearch.sources && 'animate-pulse']}>
-      {summarySearch.sources ? 'Searched for' : 'Searching for'} “{summarySearch.query}”{summarySearch.sources && !summarySearch.sources.length ? ', with no new results' : ''}
-    </p>
+    <SearchNote query={summarySearch.query} sources={summarySearch.sources} {link} />
   {/if}
   {#if text}
     <CitedText {text} sources={summarySources} {starts} writing={loading} />
@@ -219,10 +224,7 @@
       <!-- The question is the user's own text, rendered as text. -->
       <p class="mb-1 text-[0.9rem] font-semibold wrap-anywhere">{followUp.question}</p>
       {#if followUp.search}
-        <!-- The model picks the query, so it renders as text too. -->
-        <p class={['mb-1 text-[0.8rem] text-muted wrap-anywhere', !followUp.search.sources && 'animate-pulse']}>
-          {followUp.search.sources ? 'Searched for' : 'Searching for'} “{followUp.search.query}”{followUp.search.sources && !followUp.search.sources.length ? ', with no new results' : ''}
-        </p>
+        <SearchNote query={followUp.search.query} sources={followUp.search.sources} {link} />
       {/if}
       {#if followUp.text}
         <CitedText text={followUp.text} sources={citable} starts={writing ? pendingStarts : []} {writing} />
