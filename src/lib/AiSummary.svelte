@@ -29,6 +29,8 @@
 
   let text = $state('');
   let sources = $state.raw<Source[]>([]);
+  // The summary's own search, for a question its results didn't answer. sources stays unset while it runs.
+  let summarySearch = $state.raw<{ query: string; sources?: WebSearch['sources'] } | undefined>(undefined);
   let cutOff = $state(false);
   let cost = $state<number | undefined>(undefined);
   let duration = $state<number | undefined>(undefined);
@@ -51,8 +53,12 @@
   let followUpController: AbortController | undefined;
 
   const shown = $derived(pending ? [...followUps, { ...pending, cutOff: false }] : followUps);
-  // Every number the answers can cite, including results from follow-up searches.
-  const citable = $derived([...allSources({ sources, followUps }), ...(pending?.search?.sources ?? [])]);
+  const summarySources = $derived([...sources, ...(summarySearch?.sources ?? [])]);
+  // Every number the answers can cite, including results from the summary's and follow-ups' searches.
+  const citable = $derived([
+    ...allSources({ sources: summarySources, followUps }),
+    ...(pending?.search?.sources ?? []),
+  ]);
   const canAsk = $derived(Boolean(text) && !loading && !failure && followUps.length < MAX_FOLLOW_UPS);
   const totalCost = $derived(
     [cost, ...followUps.map((followUp) => followUp.cost)].reduce<number | undefined>(
@@ -62,7 +68,8 @@
   );
 
   function current(): Summary {
-    return { text, sources, cutOff, cost, duration, followUps };
+    const search = summarySearch?.sources ? { query: summarySearch.query, sources: summarySearch.sources } : undefined;
+    return { text, sources, search, cutOff, cost, duration, followUps };
   }
 
   $effect(() => {
@@ -75,6 +82,7 @@
     cutOff = false;
     cost = undefined;
     duration = undefined;
+    summarySearch = undefined;
     pending = null;
     followUpFailure = null;
     draft = '';
@@ -82,6 +90,7 @@
     const cached = cachedSummary(currentQuery, currentVariant);
     if (cached) {
       ({ text, sources, cutOff, cost, duration } = cached);
+      summarySearch = cached.search;
       followUps = cached.followUps ?? [];
       loading = false;
       return () => followUpController?.abort();
@@ -95,7 +104,12 @@
     streamSummary(currentQuery, currentResults, controller.signal, (partial) => {
         starts = [...starts, text.length];
         text = partial;
-      }).then(
+      }, (found) => {
+        // The summary starts over after a search, so the fade-in does too.
+        starts = [];
+        text = '';
+        summarySearch = found;
+      }, webSearch).then(
       (summary) => {
         saveSummary(currentQuery, currentVariant, summary, aiSummary.choice === 'on');
         cutOff = summary.cutOff;
@@ -115,7 +129,7 @@
     };
   });
 
-  // Searches General with the same settings as the page, for a follow-up the results don't cover.
+  // Searches General with the same settings as the page, for a question the results don't cover.
   async function webSearch(q: string, signal: AbortSignal): Promise<SearchResult[]> {
     const prefs = { ...searchPrefs, engines: chosenEngines.general?.slice() };
     const response = await search({ q, category: 'general', page: 1, time: 'any' }, prefs, signal);
@@ -165,7 +179,7 @@
 <section aria-label="AI summary" aria-busy={loading || pending !== null}>
   <SectionTitle
     title="AI summary"
-    info={{ id: 'ai-summary-info', text: 'Written by an AI from the result snippets, sent to OpenRouter. Follow-ups can run their own search. It can be wrong.' }}
+    info={{ id: 'ai-summary-info', text: 'Written by an AI from the result snippets, sent to OpenRouter. It can run its own search for a question the results don\'t answer. It can be wrong.' }}
   >
     {#snippet aside()}
       {#if loading || pending}
@@ -174,9 +188,15 @@
     {/snippet}
   </SectionTitle>
 
+  {#if summarySearch}
+    <!-- The model picks the query, so it renders as text. -->
+    <p class={['mb-1 text-[0.8rem] text-muted wrap-anywhere', !summarySearch.sources && 'animate-pulse']}>
+      {summarySearch.sources ? 'Searched for' : 'Searching for'} “{summarySearch.query}”{summarySearch.sources && !summarySearch.sources.length ? ', with no new results' : ''}
+    </p>
+  {/if}
   {#if text}
-    <CitedText {text} {sources} {starts} writing={loading} />
-  {:else if loading}
+    <CitedText {text} sources={summarySources} {starts} writing={loading} />
+  {:else if loading && (!summarySearch || summarySearch.sources)}
     <p class="animate-pulse text-muted">Summarizing…</p>
   {/if}
 
