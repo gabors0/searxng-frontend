@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import { aiSummary } from './ai-summary.svelte';
   import CitedText from './CitedText.svelte';
   import { chosenEngines } from './engines.svelte';
@@ -20,15 +21,24 @@
   } from './openrouter';
   import { search, type SearchResult } from './searxng';
   import { searchPrefs } from './search-prefs.svelte';
+  import SearchNote from './SearchNote.svelte';
   import SectionTitle from './SectionTitle.svelte';
   import Spinner from './Spinner.svelte';
   import { cachedSummary, saveSummary } from './summary-cache';
 
   // variant names the search settings the results came from, so a saved summary is only reused for the same ones.
-  let { query, variant, results }: { query: string; variant: string; results: SearchResult[] } = $props();
+  // link renders a query as a link to that search, for the searches the model runs.
+  let {
+    query,
+    variant,
+    results,
+    link,
+  }: { query: string; variant: string; results: SearchResult[]; link: Snippet<[string]> } = $props();
 
   let text = $state('');
   let sources = $state.raw<Source[]>([]);
+  // The summary's own search, for a question its results didn't answer. sources stays unset while it runs.
+  let summarySearch = $state.raw<{ query: string; sources?: WebSearch['sources'] } | undefined>(undefined);
   let cutOff = $state(false);
   let cost = $state<number | undefined>(undefined);
   let duration = $state<number | undefined>(undefined);
@@ -51,8 +61,12 @@
   let followUpController: AbortController | undefined;
 
   const shown = $derived(pending ? [...followUps, { ...pending, cutOff: false }] : followUps);
-  // Every number the answers can cite, including results from follow-up searches.
-  const citable = $derived([...allSources({ sources, followUps }), ...(pending?.search?.sources ?? [])]);
+  const summarySources = $derived([...sources, ...(summarySearch?.sources ?? [])]);
+  // Every number the answers can cite, including results from the summary's and follow-ups' searches.
+  const citable = $derived([
+    ...allSources({ sources: summarySources, followUps }),
+    ...(pending?.search?.sources ?? []),
+  ]);
   const canAsk = $derived(Boolean(text) && !loading && !failure && followUps.length < MAX_FOLLOW_UPS);
   const totalCost = $derived(
     [cost, ...followUps.map((followUp) => followUp.cost)].reduce<number | undefined>(
@@ -62,7 +76,8 @@
   );
 
   function current(): Summary {
-    return { text, sources, cutOff, cost, duration, followUps };
+    const search = summarySearch?.sources ? { query: summarySearch.query, sources: summarySearch.sources } : undefined;
+    return { text, sources, search, cutOff, cost, duration, followUps };
   }
 
   $effect(() => {
@@ -75,6 +90,7 @@
     cutOff = false;
     cost = undefined;
     duration = undefined;
+    summarySearch = undefined;
     pending = null;
     followUpFailure = null;
     draft = '';
@@ -82,6 +98,7 @@
     const cached = cachedSummary(currentQuery, currentVariant);
     if (cached) {
       ({ text, sources, cutOff, cost, duration } = cached);
+      summarySearch = cached.search;
       followUps = cached.followUps ?? [];
       loading = false;
       return () => followUpController?.abort();
@@ -95,7 +112,12 @@
     streamSummary(currentQuery, currentResults, controller.signal, (partial) => {
         starts = [...starts, text.length];
         text = partial;
-      }).then(
+      }, (found) => {
+        // The summary starts over after a search, so the fade-in does too.
+        starts = [];
+        text = '';
+        summarySearch = found;
+      }, webSearch).then(
       (summary) => {
         saveSummary(currentQuery, currentVariant, summary, aiSummary.choice === 'on');
         cutOff = summary.cutOff;
@@ -115,7 +137,7 @@
     };
   });
 
-  // Searches General with the same settings as the page, for a follow-up the results don't cover.
+  // Searches General with the same settings as the page, for a question the results don't cover.
   async function webSearch(q: string, signal: AbortSignal): Promise<SearchResult[]> {
     const prefs = { ...searchPrefs, engines: chosenEngines.general?.slice() };
     const response = await search({ q, category: 'general', page: 1, time: 'any' }, prefs, signal);
@@ -165,7 +187,7 @@
 <section aria-label="AI summary" aria-busy={loading || pending !== null}>
   <SectionTitle
     title="AI summary"
-    info={{ id: 'ai-summary-info', text: 'Written by an AI from the result snippets, sent to OpenRouter. Follow-ups can run their own search. It can be wrong.' }}
+    info={{ id: 'ai-summary-info', text: 'Written by an AI from the result snippets, sent to OpenRouter. It can run its own search for a question the results don\'t answer. It can be wrong.' }}
   >
     {#snippet aside()}
       {#if loading || pending}
@@ -174,9 +196,12 @@
     {/snippet}
   </SectionTitle>
 
+  {#if summarySearch}
+    <SearchNote query={summarySearch.query} sources={summarySearch.sources} {link} />
+  {/if}
   {#if text}
-    <CitedText {text} {sources} {starts} writing={loading} />
-  {:else if loading}
+    <CitedText {text} sources={summarySources} {starts} writing={loading} />
+  {:else if loading && (!summarySearch || summarySearch.sources)}
     <p class="animate-pulse text-muted">Summarizing…</p>
   {/if}
 
@@ -199,10 +224,7 @@
       <!-- The question is the user's own text, rendered as text. -->
       <p class="mb-1 text-[0.9rem] font-semibold wrap-anywhere">{followUp.question}</p>
       {#if followUp.search}
-        <!-- The model picks the query, so it renders as text too. -->
-        <p class={['mb-1 text-[0.8rem] text-muted wrap-anywhere', !followUp.search.sources && 'animate-pulse']}>
-          {followUp.search.sources ? 'Searched for' : 'Searching for'} “{followUp.search.query}”{followUp.search.sources && !followUp.search.sources.length ? ', with no new results' : ''}
-        </p>
+        <SearchNote query={followUp.search.query} sources={followUp.search.sources} {link} />
       {/if}
       {#if followUp.text}
         <CitedText text={followUp.text} sources={citable} starts={writing ? pendingStarts : []} {writing} />

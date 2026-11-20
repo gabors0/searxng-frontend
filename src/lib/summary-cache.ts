@@ -34,14 +34,19 @@ function isSource(value: any): boolean {
   );
 }
 
+function isSearch(value: any): boolean {
+  return (
+    value === undefined ||
+    (typeof value?.query === 'string' && Array.isArray(value.sources) && value.sources.every(isSource))
+  );
+}
+
 function isFollowUp(value: any): boolean {
-  const search = value?.search;
   return (
     typeof value?.question === 'string' &&
     typeof value.text === 'string' &&
     typeof value.cutOff === 'boolean' &&
-    (search === undefined ||
-      (typeof search?.query === 'string' && Array.isArray(search.sources) && search.sources.every(isSource)))
+    isSearch(value.search)
   );
 }
 
@@ -55,6 +60,7 @@ function isSaved(value: any): value is Saved {
     typeof value.summary.cutOff === 'boolean' &&
     Array.isArray(value.summary.sources) &&
     value.summary.sources.every(isSource) &&
+    isSearch(value.summary.search) &&
     (followUps === undefined || (Array.isArray(followUps) && followUps.every(isFollowUp)))
   );
 }

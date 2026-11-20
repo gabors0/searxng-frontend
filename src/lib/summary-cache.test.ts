@@ -95,15 +95,24 @@ describe('saved summaries', () => {
     expect(cachedSummary('everest', summaryVariant({ safesearch: '', language: 'de' }))).toBeUndefined();
   });
 
+  it('keep the summary\'s own search', () => {
+    const searched: Summary = { ...summary('soldered [2]'), search: { query: 'ram', sources: [{ title: 'B', url: 'https://b.test/' }] } };
+    saveSummary('soldered ram?', '', searched, true);
+    clearMemory();
+    expect(cachedSummary('soldered ram?', '')?.search).toEqual(searched.search);
+  });
+
   it('skip damaged entries in storage', () => {
     localStorage.setItem(
       KEY,
       JSON.stringify([
         { query: 'broken', savedAt: Date.now(), summary: { text: 'x', cutOff: false, sources: [{ title: 1 }] } },
+        { query: 'bad search', savedAt: Date.now(), summary: { ...summary('x'), search: { query: 'q', sources: 'none' } } },
         { query: 'everest', savedAt: Date.now(), summary: summary('tall') },
       ]),
     );
     expect(cachedSummary('broken', '')).toBeUndefined();
+    expect(cachedSummary('bad search', '')).toBeUndefined();
     expect(cachedSummary('everest', '')?.text).toBe('tall');
 
     localStorage.setItem(KEY, '{not json');

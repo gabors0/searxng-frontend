@@ -3,6 +3,7 @@ import {
   allSources,
   formatCost,
   formatDuration,
+  isQuestion,
   linkCitations,
   sourcesFor,
   streamFollowUp,
@@ -50,6 +51,23 @@ function mockFetch(...replies: Response[]) {
   );
   return bodies;
 }
+
+// The model asking for a search, streamed in pieces the way OpenRouter sends tool calls.
+function searchCall(query: string) {
+  const call = (name: string, args: string) => ({
+    choices: [{ delta: { tool_calls: [{ index: 0, function: { name, arguments: args } }] } }],
+  });
+  const json = JSON.stringify({ query });
+  const half = Math.floor(json.length / 2);
+  return stream([
+    call('search', ''),
+    call('', json.slice(0, half)),
+    call('', json.slice(half)),
+    { choices: [{ delta: {}, finish_reason: 'tool_calls' }] },
+  ]);
+}
+
+const noSearch = () => Promise.reject(new Error('unexpected search'));
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -103,17 +121,40 @@ describe('sourcesFor', () => {
 });
 
 describe('allSources', () => {
-  it('numbers follow-up searches after the summary\'s results, in order', () => {
+  it('numbers the summary\'s search, then follow-up searches, after the summary\'s results, in order', () => {
     const a = { title: 'a', url: 'https://a.test/' };
     const b = { title: 'b', url: 'https://b.test/' };
     const c = { title: 'c', url: 'https://c.test/' };
+    const d = { title: 'd', url: 'https://d.test/' };
     const followUps: FollowUp[] = [
       { question: 'q1', text: '', cutOff: false, search: { query: 's', sources: [b] } },
       { question: 'q2', text: '', cutOff: false },
       { question: 'q3', text: '', cutOff: false, search: { query: 's', sources: [c] } },
     ];
     expect(allSources({ sources: [a], followUps })).toEqual([a, b, c]);
+    expect(allSources({ sources: [a], search: { query: 's', sources: [d] }, followUps })).toEqual([a, d, b, c]);
     expect(allSources({ sources: [a] })).toEqual([a]);
+  });
+});
+
+describe('isQuestion', () => {
+  it('spots questions in English and Hungarian', () => {
+    for (const query of [
+      'does the xps 13 have soldered ram',
+      'How tall is Everest',
+      'xps 13 soldered ram?',
+      'forrasztott-e a ram az xps 13-ban',
+      'mennyi a balaton mélysége',
+      'Hány méter magas az Everest',
+    ]) {
+      expect(isQuestion(query), query).toBe(true);
+    }
+  });
+
+  it('leaves names and topics alone', () => {
+    for (const query of ['mount everest', 'rtx 5070', 'jellyfin docker', 'island', 'whois', 'e-mail kliens', 'misi']) {
+      expect(isQuestion(query), query).toBe(false);
+    }
   });
 });
 
@@ -138,6 +179,8 @@ describe('streamSummary', () => {
       [result(1, { thumbnail: 'https://img.test/a.png' })],
       new AbortController().signal,
       (partial) => heard.push(partial),
+      () => {},
+      noSearch,
     );
 
     expect(heard).toEqual(['Tall ', 'Tall peak [1].']);
@@ -150,27 +193,66 @@ describe('streamSummary', () => {
       query: 'everest',
       results: [{ number: 1, title: 'Result 1', url: 'https://example.com/1', snippet: 'Snippet 1' }],
     });
+    // A bare name gets no search tool, nor the rule for using it.
     expect(bodies[0].tools).toBeUndefined();
+    expect(bodies[0].messages[0].content).not.toContain('once for the summary');
+  });
+
+  it('searches when the model asks, then summarizes with the new results numbered after the first ones', async () => {
+    const bodies = mockFetch(searchCall('xps 13 soldered ram'), stream([text('It is soldered [2].', 'stop')]));
+    const heard: string[] = [];
+    const searches: unknown[] = [];
+    const runSearch = vi.fn(async () => [result(1), result(2)]);
+    const summary = await streamSummary(
+      'does the xps 13 have soldered ram',
+      [result(1)],
+      new AbortController().signal,
+      (partial) => heard.push(partial),
+      (search) => searches.push(search),
+      runSearch,
+    );
+
+    const found = { query: 'xps 13 soldered ram', sources: sourcesFor([result(2)]) };
+    expect(runSearch).toHaveBeenCalledWith('xps 13 soldered ram', expect.any(AbortSignal));
+    expect(searches).toEqual([{ query: 'xps 13 soldered ram' }, found]);
+    expect(heard).toEqual(['', 'It is soldered [2].']);
+    expect(summary).toMatchObject({ text: 'It is soldered [2].', sources: sourcesFor([result(1)]), search: found });
+    expect(bodies[0].tool_choice).toBe('auto');
+    expect(bodies[0].messages[0].content).toContain('once for the summary');
+    // The second request shows the search right after the results and stops the model searching again.
+    expect(bodies[1].tool_choice).toBe('none');
+    expect(bodies[1].messages.map((message: any) => message.role)).toEqual(['system', 'user', 'assistant', 'tool']);
+    expect(JSON.parse(bodies[1].messages[3].content).results).toEqual([
+      { number: 2, title: 'Result 2', url: 'https://example.com/2', snippet: 'Snippet 2' },
+    ]);
+  });
+
+  it('reports a failed search for the summary', async () => {
+    mockFetch(searchCall('anything'));
+    const failing = () => Promise.reject(new Error('timed out'));
+    await expect(
+      streamSummary('why?', [result(1)], new AbortController().signal, () => {}, () => {}, failing),
+    ).rejects.toThrow('The search for this summary failed: timed out');
   });
 
   it('marks a summary that hit the length limit as cut off', async () => {
     mockFetch(stream([text('Tall', 'length')]));
-    const summary = await streamSummary('everest', [result(1)], new AbortController().signal, () => {});
+    const summary = await streamSummary('everest', [result(1)], new AbortController().signal, () => {}, () => {}, noSearch);
     expect(summary.cutOff).toBe(true);
   });
 
   it('fails when the stream ends early or carries an error', async () => {
     const signal = new AbortController().signal;
     mockFetch(stream([text('Tall')], false));
-    await expect(streamSummary('everest', [result(1)], signal, () => {})).rejects.toThrow('ended before');
+    await expect(streamSummary('everest', [result(1)], signal, () => {}, () => {}, noSearch)).rejects.toThrow('ended before');
 
     mockFetch(stream([{ error: { message: 'overloaded' } }]));
-    await expect(streamSummary('everest', [result(1)], signal, () => {})).rejects.toThrow('overloaded');
+    await expect(streamSummary('everest', [result(1)], signal, () => {}, () => {}, noSearch)).rejects.toThrow('overloaded');
   });
 
   it('explains a missing key without offering a retry', async () => {
     mockFetch(Response.json({ error: { code: 'not_configured' } }, { status: 503 }));
-    const failure = await streamSummary('everest', [result(1)], new AbortController().signal, () => {}).catch(
+    const failure = await streamSummary('everest', [result(1)], new AbortController().signal, () => {}, () => {}, noSearch).catch(
       (error) => error,
     );
     expect(failure).toBeInstanceOf(SummaryError);
@@ -179,7 +261,7 @@ describe('streamSummary', () => {
 
   it('treats an HTML page as the sign-in having expired', async () => {
     mockFetch(new Response('<html>', { headers: { 'content-type': 'text/html' } }));
-    await expect(streamSummary('everest', [result(1)], new AbortController().signal, () => {})).rejects.toThrow(
+    await expect(streamSummary('everest', [result(1)], new AbortController().signal, () => {}, () => {}, noSearch)).rejects.toThrow(
       'sign-in may have expired',
     );
   });
@@ -202,13 +284,7 @@ describe('streamFollowUp', () => {
   });
 
   it('searches when the model asks, numbering only the new results', async () => {
-    const call = (args: string) => ({
-      choices: [{ delta: { tool_calls: [{ index: 0, function: { name: args ? '' : 'search', arguments: args } }] } }],
-    });
-    const bodies = mockFetch(
-      stream([call(''), call('{"query":"everest '), call('first ascent"}'), { choices: [{ delta: {}, finish_reason: 'tool_calls' }] }]),
-      stream([text('In 1953 [2].', 'stop')]),
-    );
+    const bodies = mockFetch(searchCall('everest first ascent'), stream([text('In 1953 [2].', 'stop')]));
     const searches: unknown[] = [];
     const followUp = await streamFollowUp(
       'everest',
@@ -229,6 +305,27 @@ describe('streamFollowUp', () => {
       number: 2,
       url: 'https://example.com/2',
     });
+  });
+
+  it('keeps the summary\'s search in the context and numbers a new search after it', async () => {
+    const searched: Summary = { ...base, search: { query: 'everest height', sources: sourcesFor([result(2)]) } };
+    const bodies = mockFetch(searchCall('everest first ascent'), stream([text('In 1953 [3].', 'stop')]));
+    const followUp = await streamFollowUp(
+      'everest',
+      searched,
+      'First climbed?',
+      signal,
+      () => {},
+      () => {},
+      async () => [result(2), result(3)],
+    );
+
+    // Result 2 came from the summary's search, so only result 3 is new.
+    expect(followUp.search?.sources).toEqual(sourcesFor([result(3)]));
+    const roles = bodies[1].messages.map((message: any) => message.role);
+    expect(roles).toEqual(['system', 'user', 'assistant', 'tool', 'assistant', 'user', 'assistant', 'tool']);
+    expect(JSON.parse(bodies[1].messages[3].content).results[0].number).toBe(2);
+    expect(JSON.parse(bodies[1].messages.at(-1).content).results[0].number).toBe(3);
   });
 
   it('drops the oldest follow-ups until the request fits', async () => {

@@ -8,7 +8,7 @@ A single-page search frontend for a private [SearXNG](https://docs.searxng.org/)
 
 - General, Images and News searches, with time ranges, paging, completions, answers, infoboxes and related searches.
 - An image viewer with zoom, and Save and Copy for the full image.
-- AI summaries with numbered citations and up to four follow-up questions, which can run one more search each. Hovering a citation previews the cited page; on a touch screen the first tap opens the preview and the second follows the link.
+- AI summaries with numbered citations and up to four follow-up questions. When a search is a question the results don't answer, such as "does the XPS 13 have soldered RAM", the summary runs one more search of its own; each follow-up can too. Hovering a citation previews the cited page; on a touch screen the first tap opens the preview and the second follows the link.
 - Settings for theme, logo, safe search, language and the engines each category uses. They are kept in the browser's localStorage, as are summaries (for 24 hours, and only while AI summary is On).
 
 Start a search with `-` to summarize just that search while AI summary is Off.
